@@ -25,7 +25,7 @@ from astropy import units as u
 from astropy.time import Time
 
 # Import module functions
-from query import query_vo_archives, download_fits_data, standardize_fits_headers, extract_metadata, save_to_csv, save_to_excel
+from query import query_vo_archives, download_fits_data, standardize_fits_headers, extract_metadata, save_data_to_csv, save_to_excel
 from alerts import parse_gcn_notice, get_ligo_alerts, parse_ligo_skymap, check_visibility
 
 # Configure logging
