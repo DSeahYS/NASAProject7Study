@@ -1,27 +1,19 @@
-Data Acquisition Module for NIR GRB/GW Counterpart Pipeline
+NIR GRB/GW Pipeline: Data Acquisition Module
 Overview
-The Data Acquisition module forms the foundation of the NIR GRB/GW Counterpart Pipeline, responsible for gathering astronomical data from various sources, monitoring real-time alerts, and preparing data for further analysis. This module consists of three main components:
-
-data_main.py: The main entry point for data acquisition functionality
-
-query.py: Handles querying astronomical archives and databases
-
-alerts.py: Monitors and processes GCN notices and gravitational wave alerts
+The Data Acquisition module forms the foundation of the NIR GRB/GW Counterpart Pipeline, responsible for gathering astronomical data from various sources, monitoring real-time alerts, and preparing data for further analysis. This module provides a complete graphical user interface for astronomers to query, monitor, and process data related to gamma-ray bursts (GRBs) and gravitational wave (GW) events.
 
 Features
-Query Virtual Observatory (VO) archives for NIR observations
+Virtual Observatory Queries: Search astronomical archives for NIR observations
 
-Monitor GCN (GRB Coordinates Network) notices for gamma-ray burst alerts
+GRB/GW Alert Monitoring: Track and process GCN notices and LIGO/Virgo alerts
 
-Receive and process LIGO/Virgo gravitational wave alerts
+Data Management: Download, standardize, and export observation data
 
-Check target visibility from observatories (e.g., Lowell Discovery Telescope)
+User-friendly Interface: Tabbed GUI with dedicated sections for different functions
 
-Download and standardize FITS files
+Multi-format Export: Save results as CSV or Excel files
 
-Extract metadata from astronomical observations
-
-Save data in multiple formats (CSV, Excel)
+Customizable Settings: Configure directory paths, observatories, and logging
 
 Installation
 Prerequisites
@@ -29,152 +21,161 @@ Python 3.8 or higher
 
 Required Python packages:
 
-pyvo
+text
+pip install pyvo astropy requests pandas matplotlib tkinter numpy
+Application Interface
+The application is divided into four main sections:
 
-astropy
+1. VO Queries Tab
+Query Virtual Observatory archives for astronomical data:
+![image](https://github.com/user-attachments/assets/9e81526f-44ef-4336-93de-cd3eb375a7fb)
 
-requests
+Query Parameters:
 
-pandas
+Target Name field (e.g., "M31")
 
-matplotlib
+Coordinates (RA, Dec) input fields
 
-tkinter (for GUI components)
+Search Radius in arcminutes
 
-Setup
-bash
-# Install required packages
-pip install pyvo astropy requests pandas matplotlib
+NIR Band selection (J, H, K, Y checkboxes)
 
-# If you're running on Linux, you may need to install tkinter separately
-# For Ubuntu/Debian:
-# sudo apt-get install python3-tk
-Usage
-Querying Virtual Observatory Archives
-python
-from data_acquisition.query import query_vo_archives
-from astropy.coordinates import SkyCoord
-import astropy.units as u
+Control Buttons:
 
-# Define target position
-target_position = SkyCoord(ra=123.456, dec=78.90, unit="deg")
+Resolve Name: Convert object name to coordinates
 
-# Query for NIR observations within 10 arcminutes
-results = query_vo_archives(
-    position=target_position,
-    radius=10*u.arcmin,
-    bands=['J', 'H', 'K']
-)
+Execute Query: Send query to VO archives
 
-# Display results
-print(f"Found {len(results)} observations")
-Downloading FITS Data
-python
-from data_acquisition.query import download_fits_data
+Download Data: Retrieve FITS files for selected observations
 
-# Download the FITS files from query results
-fits_files = download_fits_data(
-    results,
-    destination_dir="./data/fits_data"
-)
+Results Table:
 
-# Process the downloaded files
-for fits_file in fits_files:
-    print(f"Downloaded: {fits_file}")
-Monitoring GCN Notices
-python
-from data_acquisition.alerts import parse_gcn_notice, check_visibility
+Displays query results with ID, RA, DEC, INSTRUMENT, FILTER, DATE_OBS columns
 
-# Parse a GCN notice
-notice = parse_gcn_notice("path/to/notice.xml")
+Shows data from various instruments (RIMAS, PRIME, SOFI, HAWK-I, ISAAC)
 
-# Check if the GRB is observable from your telescope
-visibility = check_visibility(
-    notice['ra'],
-    notice['dec'],
-    observatory="LDT"
-)
+Export buttons for CSV and Excel formats
 
-if visibility['observable']:
-    print(f"Target is observable for {visibility['hours_visible']} hours tonight")
-    print(f"Transit time: {visibility['transit_time']}")
-else:
-    print(f"Target not observable: {visibility['reason']}")
-Simulating LIGO/Virgo Alerts
-python
-from data_acquisition.alerts import retrieve_gw_alerts
+2. GRB/GW Alerts Tab
+Monitor and process astronomical alerts:
+![image](https://github.com/user-attachments/assets/977f768b-2bae-4e48-a573-58f7116f8ecd)
 
-# Generate simulated gravitational wave alerts
-gw_alerts = retrieve_gw_alerts(simulated=True)
+Alert Controls:
 
-for alert in gw_alerts:
-    print(f"GW Alert: {alert['id']}")
-    print(f"Localization area: {alert['area']} square degrees")
-    print(f"Distance: {alert['distance']} ± {alert['distance_error']} Mpc")
-Saving Data
-python
-from data_acquisition.query import save_to_csv, save_to_excel
-import pandas as pd
+GCN Monitoring: Start Monitor and Query Recent buttons
 
-# Create a DataFrame with results
-df = pd.DataFrame({
-    'target': ['GRB 230101A', 'GRB 230215B'],
-    'ra': [123.456, 234.567],
-    'dec': [45.678, 56.789],
-    'observation_date': ['2023-01-01', '2023-02-15'],
-    'filter': ['J', 'K'],
-    'exposure_time': [300, 600]
-})
+LIGO/Virgo Alerts: Get Alerts and Download Skymap buttons
 
-# Save to CSV
-csv_path = save_to_csv(df, output_dir="results", filename="observations.csv")
+Visibility Check: Determine if targets are observable
 
-# Save to Excel
-excel_path = save_to_excel(df, output_dir="results", filename="observations.xlsx")
-Module Components
-data_main.py
-The main execution script that coordinates the data acquisition process. It provides:
+Recent Alerts:
 
-Command-line interface for initiating data queries
+Table showing alert time, type, source, coordinates, and significance
 
-Graphical user interface for interactive use
+Displays both GW events (H1, L1, V1 sources) and GRB events (Swift-BAT)
 
-Workflow coordination between query and alert modules
+Alert Details:
 
-query.py
-Handles interaction with astronomical databases and data processing:
+Detailed information panel for the selected alert
 
-query_vo_archives(): Searches Virtual Observatory services for observations
+Shows event specifics like time, instruments, significance, and ID
 
-download_fits_data(): Downloads FITS files from query results
+3. Data Export Tab
+Export and manage query results:
+![image](https://github.com/user-attachments/assets/2b477156-d530-4579-8a44-0b55cba87f68)
 
-standardize_fits_headers(): Normalizes header information across different data sources
+Export Controls:
 
-extract_metadata(): Extracts key information from FITS headers
+Format selection (CSV/Excel)
 
-save_data_to_csv() / save_to_csv(): Exports data to CSV format
+Dataset Size configuration
 
-save_to_excel(): Exports data to Excel format
+Output Directory selection with Browse button
 
-alerts.py
-Monitors and processes astronomical alert systems:
+Generate Large Dataset button for simulations
 
-parse_gcn_notice(): Extracts information from GCN notices
+Export History:
 
-check_visibility(): Determines if a target is observable from a specific location
+Records of previous exports with timestamp, type, row count, and file path
 
-retrieve_gw_alerts(): Gets gravitational wave alerts from LIGO/Virgo or simulates them
+4. Settings Tab
+Configure application parameters:
+![image](https://github.com/user-attachments/assets/31d659b3-0096-403b-88ab-6be246c49270)
 
-calculate_transit_time(): Computes when a target will transit at a given observatory
+General Settings:
 
-Troubleshooting
-Connection Issues: If you encounter 404 errors when connecting to VO services, check your internet connection and verify the service endpoints are correct.
+Data Directory path configuration
 
-Missing Dependencies: Ensure all required Python packages are installed.
+Observatory Settings:
 
-Import Errors: Verify your Python path includes the project directory.
+Default Observatory selection (e.g., LDT - Lowell Discovery Telescope)
 
-FITS Processing Errors: The system will create placeholder files if download or processing fails.
+Logging Settings:
+
+Log Level selection (INFO, DEBUG, WARNING, ERROR)
+
+Console Output:
+
+Live log of application activities and operations
+
+Usage Examples
+Searching for NIR Observations
+Navigate to the VO Queries tab
+
+Enter a target name (e.g., "M31") or coordinates
+
+Set search radius (e.g., 10 arcmin)
+
+Select desired NIR bands (J, H, K, Y)
+
+Click "Resolve Name" to convert target to coordinates
+
+Click "Execute Query" to search archives
+
+Review results in the table
+
+Click "Download Data" to retrieve FITS files
+
+Use "Export to CSV" or "Export to Excel" to save results
+
+Monitoring GRB/GW Alerts
+Navigate to the GRB/GW Alerts tab
+
+Click "Start Monitor" to begin listening for GCN notices
+
+Click "Get Alerts" to retrieve LIGO/Virgo alerts
+
+Select an alert from the Recent Alerts table
+
+View detailed information in the Alert Details panel
+
+Click "Check Visibility" to determine if the target is observable
+
+Click "Download Skymap" for gravitational wave events
+
+Exporting and Managing Data
+Navigate to the Data Export tab
+
+Select export format (CSV or Excel)
+
+Set dataset size or click "Generate Large Dataset" for simulations
+
+Specify output directory
+
+Track export history in the table below
+
+Configuring Settings
+Navigate to the Settings tab
+
+Set data directory path
+
+Select default observatory
+
+Choose appropriate log level
+
+Monitor operations in the Console Output
+
+Click "Apply Settings" to save changes
 
 Data Sources
 The module connects to multiple astronomical data services:
@@ -189,5 +190,31 @@ GCN (GRB Coordinates Network)
 
 LIGO/Virgo Gravitational Wave Network
 
+Supported Instruments
+The application is optimized for NIR instruments including:
+
+RIMAS (Rapid infrared IMAger Spectrometer)
+
+PRIME (PRime-focus Infrared Microlensing Experiment)
+
+SOFI (Son OF ISAAC)
+
+HAWK-I (High Acuity Wide-field K-band Imager)
+
+ISAAC (Infrared Spectrometer And Array Camera)
+
+Troubleshooting
+No Results Found: The application will generate simulated data when real observations are not available
+
+Connection Issues: Check internet connectivity or VPN settings if archive queries fail
+
+File Download Errors: The system creates placeholder files when downloads fail
+
+Alert Monitoring: Requires stable internet connection for real-time notifications
+
 Notes
-This module is designed to work with both real and simulated data, allowing for testing and development when actual astronomical events are not available.
+The current timestamp displayed in the application shows the real-time date and time
+
+Sample data shown is simulated with future dates (2025-03-01) for testing purposes
+
+The application supports both real and simulated data for development and testing
