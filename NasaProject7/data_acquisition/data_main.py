@@ -1,12 +1,9 @@
-#!/usr/bin/env python3
 """
 NIR GRB/GW Pipeline: Data Acquisition Tool
 
 A production-ready tool for querying, downloading, and analyzing 
 near-infrared observations related to gamma-ray bursts and gravitational wave events.
 
-Usage:
-    python data_main.py
 """
 
 import os
