@@ -1,9 +1,13 @@
+#!/usr/bin/env python3
+
 """
 NIR GRB/GW Pipeline: Data Acquisition Tool
 
-A production-ready tool for querying, downloading, and analyzing 
+A production-ready tool for querying, downloading, and analyzing
 near-infrared observations related to gamma-ray bursts and gravitational wave events.
 
+Usage:
+python data_main.py
 """
 
 import os
@@ -14,8 +18,7 @@ from pathlib import Path
 import logging
 import tkinter as tk
 from tkinter import ttk, scrolledtext, filedialog, messagebox
-from datetime import datetime
-
+from datetime import datetime, timedelta  # Added timedelta import
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
 from astropy import units as u
@@ -98,10 +101,8 @@ class DataAcquisitionApp:
         # Create status bar
         self.status_var = tk.StringVar()
         self.status_var.set("Ready")
-        
         self.status_bar = ttk.Frame(self.root, relief=tk.SUNKEN, padding=(10, 2))
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-        
         ttk.Label(self.status_bar, textvariable=self.status_var, anchor=tk.W).pack(side=tk.LEFT)
         ttk.Label(self.status_bar, text=f"Data Dir: {self.data_dir}", anchor=tk.E).pack(side=tk.RIGHT)
     
@@ -118,7 +119,7 @@ class DataAcquisitionApp:
         ttk.Label(params_frame, text="Target Name:").grid(row=0, column=0, sticky=tk.W, pady=2)
         self.target_entry = ttk.Entry(params_frame, width=30)
         self.target_entry.grid(row=0, column=1, sticky=tk.W, pady=2)
-        self.target_entry.insert(0, "M31")  # Default value
+        self.target_entry.insert(0, "M31") # Default value
         
         ttk.Label(params_frame, text="Coordinates (RA, Dec):").grid(row=1, column=0, sticky=tk.W, pady=2)
         coord_frame = ttk.Frame(params_frame)
@@ -131,12 +132,11 @@ class DataAcquisitionApp:
         ttk.Label(params_frame, text="Search Radius (arcmin):").grid(row=2, column=0, sticky=tk.W, pady=2)
         self.radius_entry = ttk.Entry(params_frame, width=10)
         self.radius_entry.grid(row=2, column=1, sticky=tk.W, pady=2)
-        self.radius_entry.insert(0, "10")  # Default value
+        self.radius_entry.insert(0, "10") # Default value
         
         # NIR bands frame
         bands_frame = ttk.LabelFrame(params_frame, text="NIR Bands", padding=5)
         bands_frame.grid(row=0, column=2, rowspan=3, padx=10, sticky=tk.N)
-        
         self.band_vars = {}
         for i, band in enumerate(['J', 'H', 'K', 'Y']):
             self.band_vars[band] = tk.BooleanVar(value=True)
@@ -145,7 +145,6 @@ class DataAcquisitionApp:
         # Buttons frame
         buttons_frame = ttk.Frame(params_frame)
         buttons_frame.grid(row=0, column=3, rowspan=3, padx=10, sticky=tk.N)
-        
         ttk.Button(buttons_frame, text="Resolve Name", command=self.resolve_target_name).pack(fill=tk.X, pady=2)
         ttk.Button(buttons_frame, text="Execute Query", command=self.run_vo_query).pack(fill=tk.X, pady=2)
         ttk.Button(buttons_frame, text="Download Data", command=self.download_selected_data).pack(fill=tk.X, pady=2)
@@ -173,7 +172,6 @@ class DataAcquisitionApp:
         # Export buttons
         export_frame = ttk.Frame(query_frame)
         export_frame.pack(fill=tk.X, pady=5)
-        
         ttk.Button(export_frame, text="Export to CSV", command=lambda: self.export_results('csv')).pack(side=tk.LEFT, padx=5)
         ttk.Button(export_frame, text="Export to Excel", command=lambda: self.export_results('excel')).pack(side=tk.LEFT, padx=5)
     
@@ -189,36 +187,27 @@ class DataAcquisitionApp:
         # GCN controls
         gcn_frame = ttk.Frame(controls_frame)
         gcn_frame.pack(side=tk.LEFT, padx=10)
-        
         ttk.Label(gcn_frame, text="GCN Monitoring:").pack(anchor=tk.W)
-        
         gcn_buttons = ttk.Frame(gcn_frame)
         gcn_buttons.pack(fill=tk.X, pady=5)
-        
         ttk.Button(gcn_buttons, text="Start Monitor", command=self.start_gcn_monitor).pack(side=tk.LEFT, padx=5)
         ttk.Button(gcn_buttons, text="Query Recent", command=self.query_recent_gcn).pack(side=tk.LEFT, padx=5)
         
         # LIGO controls
         ligo_frame = ttk.Frame(controls_frame)
         ligo_frame.pack(side=tk.LEFT, padx=10)
-        
         ttk.Label(ligo_frame, text="LIGO/Virgo Alerts:").pack(anchor=tk.W)
-        
         ligo_buttons = ttk.Frame(ligo_frame)
         ligo_buttons.pack(fill=tk.X, pady=5)
-        
         ttk.Button(ligo_buttons, text="Get Alerts", command=self.get_ligo_alerts).pack(side=tk.LEFT, padx=5)
         ttk.Button(ligo_buttons, text="Download Skymap", command=self.download_ligo_skymap).pack(side=tk.LEFT, padx=5)
         
         # Visibility controls
         visibility_frame = ttk.Frame(controls_frame)
         visibility_frame.pack(side=tk.LEFT, padx=10)
-        
         ttk.Label(visibility_frame, text="Visibility Check:").pack(anchor=tk.W)
-        
         vis_buttons = ttk.Frame(visibility_frame)
         vis_buttons.pack(fill=tk.X, pady=5)
-        
         ttk.Button(vis_buttons, text="Check Visibility", command=self.check_visibility).pack(side=tk.LEFT, padx=5)
         
         # Alerts list frame
@@ -244,12 +233,11 @@ class DataAcquisitionApp:
         # Alert details frame
         details_frame = ttk.LabelFrame(alerts_frame, text="Alert Details", padding=10)
         details_frame.pack(fill=tk.X, pady=5)
-        
         self.details_text = scrolledtext.ScrolledText(details_frame, height=8)
         self.details_text.pack(fill=tk.BOTH, expand=True)
         
         # Set up event handler for clicking on an alert
-        self.alerts_tree.bind('<<TreeviewSelect>>', self.show_alert_details)
+        self.alerts_tree.bind('<ButtonRelease-1>', self.show_alert_details)
     
     def create_data_export_tab(self):
         """Create the data export tab."""
@@ -263,9 +251,7 @@ class DataAcquisitionApp:
         # Format selection
         format_frame = ttk.Frame(controls_frame)
         format_frame.pack(side=tk.LEFT, padx=10)
-        
         ttk.Label(format_frame, text="Export Format:").pack(anchor=tk.W)
-        
         self.export_format = tk.StringVar(value="csv")
         ttk.Radiobutton(format_frame, text="CSV", variable=self.export_format, value="csv").pack(anchor=tk.W)
         ttk.Radiobutton(format_frame, text="Excel", variable=self.export_format, value="excel").pack(anchor=tk.W)
@@ -273,28 +259,21 @@ class DataAcquisitionApp:
         # Size controls
         size_frame = ttk.Frame(controls_frame)
         size_frame.pack(side=tk.LEFT, padx=10)
-        
         ttk.Label(size_frame, text="Dataset Size:").pack(anchor=tk.W)
-        
         self.dataset_size = tk.StringVar(value="10000")
         size_entry = ttk.Entry(size_frame, textvariable=self.dataset_size, width=10)
         size_entry.pack(anchor=tk.W, pady=2)
-        
         ttk.Button(size_frame, text="Generate Large Dataset", command=self.generate_large_dataset).pack(anchor=tk.W, pady=2)
         
         # Directory selection
         dir_frame = ttk.Frame(controls_frame)
         dir_frame.pack(side=tk.LEFT, padx=10)
-        
         ttk.Label(dir_frame, text="Output Directory:").pack(anchor=tk.W)
-        
         dir_select_frame = ttk.Frame(dir_frame)
         dir_select_frame.pack(fill=tk.X, pady=2)
-        
         self.export_dir = tk.StringVar(value=str(self.excel_dir))
         dir_entry = ttk.Entry(dir_select_frame, textvariable=self.export_dir, width=30)
         dir_entry.pack(side=tk.LEFT, padx=(0, 5))
-        
         ttk.Button(dir_select_frame, text="Browse...", command=self.browse_export_dir).pack(side=tk.LEFT)
         
         # Export history frame
@@ -332,13 +311,10 @@ class DataAcquisitionApp:
         # Data directory
         dir_frame = ttk.Frame(general_frame)
         dir_frame.pack(fill=tk.X, pady=5)
-        
         ttk.Label(dir_frame, text="Data Directory:").pack(side=tk.LEFT)
-        
         self.data_dir_var = tk.StringVar(value=str(self.data_dir))
         dir_entry = ttk.Entry(dir_frame, textvariable=self.data_dir_var, width=40)
         dir_entry.pack(side=tk.LEFT, padx=5)
-        
         ttk.Button(dir_frame, text="Browse...", command=self.browse_data_dir).pack(side=tk.LEFT)
         
         # Observatory settings frame
@@ -347,7 +323,6 @@ class DataAcquisitionApp:
         
         # Observatory selection
         ttk.Label(obs_frame, text="Default Observatory:").grid(row=0, column=0, sticky=tk.W, pady=2)
-        
         self.observatory = tk.StringVar(value="LDT")
         observatories = ["LDT", "PRIME", "Keck", "Gemini-N", "Gemini-S", "SOAR", "CTIO", "CFHT"]
         obs_combo = ttk.Combobox(obs_frame, textvariable=self.observatory, values=observatories, state="readonly")
@@ -359,25 +334,21 @@ class DataAcquisitionApp:
         
         # Log level selection
         ttk.Label(log_frame, text="Log Level:").grid(row=0, column=0, sticky=tk.W, pady=2)
-        
         self.log_level = tk.StringVar(value="INFO")
         log_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         log_combo = ttk.Combobox(log_frame, textvariable=self.log_level, values=log_levels, state="readonly")
         log_combo.grid(row=0, column=1, sticky=tk.W, pady=2)
-        
         log_combo.bind("<<ComboboxSelected>>", self.set_log_level)
         
         # Buttons frame
         button_frame = ttk.Frame(settings_frame)
         button_frame.pack(fill=tk.X, pady=10)
-        
         ttk.Button(button_frame, text="Apply Settings", command=self.apply_settings).pack(side=tk.RIGHT, padx=5)
         ttk.Button(button_frame, text="Reset to Defaults", command=self.reset_settings).pack(side=tk.RIGHT, padx=5)
         
         # Console output
         console_frame = ttk.LabelFrame(settings_frame, text="Console Output", padding=10)
         console_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-        
         self.console_text = scrolledtext.ScrolledText(console_frame, height=10)
         self.console_text.pack(fill=tk.BOTH, expand=True)
         
@@ -420,12 +391,12 @@ class DataAcquisitionApp:
                 # If astroquery is not available, simulate a result for common objects
                 print("Warning: astroquery not available, using hardcoded coordinates")
                 common_objects = {
-                    "m31": (10.6847, 41.2687),  # Andromeda Galaxy
-                    "m51": (202.4696, 47.1953),  # Whirlpool Galaxy 
-                    "m87": (187.7059, 12.3911),  # Messier 87
-                    "m81": (148.8882, 69.0653),  # Bode's Galaxy
-                    "sn1987a": (83.8667, -69.2697),  # SN 1987A
-                    "grb221009a": (288.27, 19.78)  # GRB 221009A
+                    "m31": (10.6847, 41.2687), # Andromeda Galaxy
+                    "m51": (202.4696, 47.1953), # Whirlpool Galaxy
+                    "m87": (187.7059, 12.3911), # Messier 87
+                    "m81": (148.8882, 69.0653), # Bode's Galaxy
+                    "sn1987a": (83.8667, -69.2697), # SN 1987A
+                    "grb221009a": (288.27, 19.78) # GRB 221009A
                 }
                 
                 lower_name = target_name.lower().replace(" ", "")
@@ -441,7 +412,6 @@ class DataAcquisitionApp:
             if result is not None:
                 ra = result['RA'][0]
                 dec = result['DEC'][0]
-                
                 # Convert to degrees
                 coord = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
                 
@@ -451,7 +421,6 @@ class DataAcquisitionApp:
             else:
                 self.root.after(0, lambda: messagebox.showwarning("Warning", f"Could not resolve target name: {target_name}"))
                 self.status_var.set("Ready")
-                
         except Exception as e:
             self.root.after(0, lambda: messagebox.showerror("Error", f"Error resolving target name: {str(e)}"))
             self.status_var.set("Ready")
@@ -460,7 +429,6 @@ class DataAcquisitionApp:
         """Update the coordinate entries from the main thread."""
         self.ra_entry.delete(0, tk.END)
         self.ra_entry.insert(0, f"{ra:.6f}")
-        
         self.dec_entry.delete(0, tk.END)
         self.dec_entry.insert(0, f"{dec:.6f}")
     
@@ -522,9 +490,9 @@ class DataAcquisitionApp:
                 results['dec'] = [position.dec.degree - (i*0.01) for i in range(5)]
                 results['instrument'] = ['RIMAS', 'PRIME', 'SOFI', 'HAWK-I', 'ISAAC']
                 results['filter'] = ['J', 'H', 'K', 'J', 'K']
-                results['date_obs'] = ['2025-03-01T00:00:00', '2025-03-01T01:00:00', 
-                                     '2025-03-01T02:00:00', '2025-03-02T00:00:00', 
-                                     '2025-03-02T01:00:00']
+                results['date_obs'] = ['2025-03-01T00:00:00', '2025-03-01T01:00:00',
+                                      '2025-03-01T02:00:00', '2025-03-02T00:00:00',
+                                      '2025-03-02T01:00:00']
                 results['access_url'] = [f"https://example.com/simulated/{i}.fits" for i in range(5)]
                 results['service_name'] = ['SIMULATION'] * 5
             
@@ -534,7 +502,6 @@ class DataAcquisitionApp:
             # Update the UI from the main thread
             self.root.after(0, self._update_results_tree, results)
             self.status_var.set(f"Query complete. Found {len(results)} results.")
-            
         except Exception as e:
             self.root.after(0, lambda: messagebox.showerror("Error", f"Error running VO query: {str(e)}"))
             self.status_var.set("Ready")
@@ -551,24 +518,19 @@ class DataAcquisitionApp:
         # Add the results
         for i, row in enumerate(results):
             values = []
-            
             # Get the values for each column (various column names are used in different services)
             id_val = row.get('obs_id', row.get('observation_id', f"result_{i}"))
-            
             ra_val = row.get('ra', row.get('s_ra', 0.0))
             if hasattr(ra_val, 'value'):
                 ra_val = ra_val.value
-            
             dec_val = row.get('dec', row.get('s_dec', 0.0))
             if hasattr(dec_val, 'value'):
                 dec_val = dec_val.value
-            
             instrument = row.get('instrument', row.get('instrume', 'Unknown'))
             filter_val = row.get('filter', row.get('band', 'Unknown'))
             date_obs = row.get('date_obs', row.get('t_min', 'Unknown'))
             
             values = [id_val, f"{ra_val:.6f}", f"{dec_val:.6f}", instrument, filter_val, date_obs]
-            
             self.results_tree.insert('', tk.END, values=values)
     
     def download_selected_data(self):
@@ -700,7 +662,6 @@ class DataAcquisitionApp:
             message = f"Downloaded and processed {len(processed_files)} files to {download_dir}"
             self.root.after(0, lambda: messagebox.showinfo("Download Complete", message))
             self.status_var.set(message)
-            
         except Exception as e:
             self.root.after(0, lambda: messagebox.showerror("Error", f"Error downloading data: {str(e)}"))
             self.status_var.set("Ready")
@@ -718,8 +679,8 @@ class DataAcquisitionApp:
         if format_type == 'csv':
             output_dir = self.csv_dir
             filename = f"query_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            save_func = save_to_csv
-        else:  # Excel
+            save_func = save_data_to_csv
+        else: # Excel
             output_dir = self.excel_dir
             filename = f"query_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             save_func = save_to_excel
@@ -759,7 +720,7 @@ class DataAcquisitionApp:
                     import pandas as pd
                     df = pd.DataFrame(data=data.as_array())
                     df.to_csv(file_path, index=False)
-                else:  # Excel
+                else: # Excel
                     # Convert to pandas dataframe and save as Excel
                     import pandas as pd
                     df = pd.DataFrame(data=data.as_array())
@@ -776,7 +737,6 @@ class DataAcquisitionApp:
             message = f"Exported {export_rows} rows to {file_path}"
             self.root.after(0, lambda: messagebox.showinfo("Export Complete", message))
             self.status_var.set(message)
-            
         except Exception as e:
             self.root.after(0, lambda: messagebox.showerror("Error", f"Error exporting data: {str(e)}"))
             self.status_var.set("Ready")
@@ -793,7 +753,7 @@ class DataAcquisitionApp:
         selected_items = self.export_tree.selection()
         if not selected_items:
             return
-            
+        
         item = selected_items[0]
         file_path = self.export_tree.item(item, "values")[3]
         
@@ -801,16 +761,14 @@ class DataAcquisitionApp:
             # Use the platform-specific way to open a file
             import os
             import platform
-            
             if platform.system() == 'Windows':
                 os.startfile(file_path)
-            elif platform.system() == 'Darwin':  # macOS
+            elif platform.system() == 'Darwin': # macOS
                 import subprocess
                 subprocess.run(['open', file_path])
-            else:  # Linux
+            else: # Linux
                 import subprocess
                 subprocess.run(['xdg-open', file_path])
-                
         except Exception as e:
             messagebox.showerror("Error", f"Could not open file: {str(e)}")
     
@@ -874,7 +832,7 @@ class DataAcquisitionApp:
         # Update all loggers
         for logger_name in logging.root.manager.loggerDict:
             logging.getLogger(logger_name).setLevel(level)
-            
+        
         print(f"Log level set to: {level_name}")
     
     def start_gcn_monitor(self):
@@ -943,16 +901,13 @@ class DataAcquisitionApp:
         time_str = notice.get('time', 'Unknown')
         if hasattr(time_str, 'isot'):
             time_str = time_str.isot
-        
         type_str = notice.get('type', 'Unknown')
         source = notice.get('source', 'Unknown')
-        
         position = notice.get('position')
         ra = dec = 'Unknown'
         if position:
             ra = f"{position.ra.degree:.6f}"
             dec = f"{position.dec.degree:.6f}"
-        
         significance = notice.get('flux', '-')
         
         # Add to the treeview
@@ -986,7 +941,6 @@ class DataAcquisitionApp:
             # Update the UI from the main thread
             self.root.after(0, self._update_ligo_alerts, alerts)
             self.status_var.set(f"Retrieved {len(alerts)} LIGO/Virgo alerts")
-            
         except Exception as e:
             self.root.after(0, lambda: messagebox.showerror("Error", f"Error retrieving LIGO/Virgo alerts: {str(e)}"))
             self.status_var.set("Ready")
@@ -1022,7 +976,6 @@ class DataAcquisitionApp:
         # Get the selected alert
         item = selected_items[0]
         alert_type = self.alerts_tree.item(item, "values")[1]
-        
         if alert_type != 'GW':
             messagebox.showwarning("Warning", "Selected alert is not a gravitational wave alert.")
             return
@@ -1035,12 +988,12 @@ class DataAcquisitionApp:
         skymap_dir.mkdir(exist_ok=True)
         
         # Create a placeholder skymap file
-        event_id = "S230101a"  # Simulated event ID
+        event_id = "S230101a" # Simulated event ID
         skymap_file = skymap_dir / f"{event_id}_skymap.txt"
         with open(skymap_file, 'w') as f:
             f.write("This is a placeholder for a LIGO skymap file.\n")
             f.write("In a real implementation, a HEALPix FITS file would be downloaded and parsed.\n")
-            f.write("RA: 197.45\n")  # GW170817 location
+            f.write("RA: 197.45\n") # GW170817 location
             f.write("Dec: -23.38\n")
         
         # Parse the simulated skymap
@@ -1121,7 +1074,6 @@ class DataAcquisitionApp:
             else:
                 self.root.after(0, lambda: messagebox.showwarning("Warning", f"Could not check visibility from {observatory}"))
                 self.status_var.set("Ready")
-            
         except Exception as e:
             self.root.after(0, lambda: messagebox.showerror("Error", f"Error checking visibility: {str(e)}"))
             self.status_var.set("Ready")
@@ -1137,11 +1089,9 @@ class DataAcquisitionApp:
         # Add the visibility information
         self.details_text.insert(tk.END, "Visibility Information\n")
         self.details_text.insert(tk.END, "======================\n\n")
-        
         self.details_text.insert(tk.END, f"Target: {visibility['coordinates'].to_string('hmsdms')}\n")
         self.details_text.insert(tk.END, f"Observatory: {visibility['observatory']}\n")
         self.details_text.insert(tk.END, f"Time: {visibility['time'].iso}\n\n")
-        
         self.details_text.insert(tk.END, f"Current altitude: {visibility['altitude'].deg:.1f}°\n")
         self.details_text.insert(tk.END, f"Current azimuth: {visibility['azimuth'].deg:.1f}°\n")
         self.details_text.insert(tk.END, f"Airmass: {visibility['airmass']:.2f}\n")
@@ -1152,7 +1102,6 @@ class DataAcquisitionApp:
         
         self.details_text.insert(tk.END, f"Is it night? {is_night}\n")
         self.details_text.insert(tk.END, f"Is target observable? {is_observable}\n\n")
-        
         self.details_text.insert(tk.END, f"Transit time: {visibility['transit_time'].iso}\n")
         self.details_text.insert(tk.END, f"Observable hours tonight: {visibility['observable_hours']:.1f}\n")
     
@@ -1208,7 +1157,7 @@ class DataAcquisitionApp:
                 'filter': np.random.choice(['J', 'H', 'K'], size),
                 'exptime': np.random.randint(30, 600, size),
                 'signal_to_noise': np.random.exponential(5, size),
-                'date_obs': pd.date_range(start='2025-01-01', periods=size, freq='S')
+                'date_obs': pd.date_range(start='2025-01-01', periods=size, freq='s')  # Changed from 'S' to 's'
             }
             
             df = pd.DataFrame(data)
@@ -1217,11 +1166,11 @@ class DataAcquisitionApp:
             if format_type == 'csv':
                 file_path = Path(output_dir) / f'large_dataset_{size}_rows.csv'
                 df.to_csv(file_path, index=False)
-            else:  # Excel
+            else: # Excel
                 file_path = Path(output_dir) / f'large_dataset_{size}_rows.xlsx'
                 
                 # For very large datasets, use chunking to avoid Excel row limit
-                if size > 1000000:  # Excel row limit is 1,048,576
+                if size > 1000000: # Excel row limit is 1,048,576
                     with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
                         for i in range(0, size, 1000000):
                             sheet_name = f'Data_{i//1000000 + 1}'
@@ -1240,7 +1189,6 @@ class DataAcquisitionApp:
             self.root.after(0, lambda: messagebox.showinfo("Dataset Generation Complete", message))
             self.status_var.set(message)
             print(message)
-            
         except Exception as e:
             self.root.after(0, lambda: messagebox.showerror("Error", f"Error generating dataset: {str(e)}"))
             self.status_var.set("Ready")
@@ -1319,8 +1267,8 @@ class DataAcquisitionApp:
                 if 'classification' in found_alert:
                     self.details_text.insert(tk.END, "\nSource Classification:\n")
                     for key, value in found_alert['classification'].items():
-                        self.details_text.insert(tk.END, f"  {key}: {value:.2f}\n")
-                        
+                        self.details_text.insert(tk.END, f" {key}: {value:.2f}\n")
+                
                 self.details_text.insert(tk.END, "\nActions:\n")
                 self.details_text.insert(tk.END, "1. Download skymap\n")
                 self.details_text.insert(tk.END, "2. Check for NIR followup data\n")
@@ -1336,13 +1284,11 @@ class DataAcquisitionApp:
             if visibility:
                 # Update the details text
                 def update_details():
-                    self.details_text.delete("end-2l", tk.END)  # Delete "Calculating..." line
-                    
+                    self.details_text.delete("end-2l", tk.END) # Delete "Calculating..." line
                     is_observable = "Yes" if visibility['is_observable'] else "No"
                     alt = visibility['altitude'].deg
                     airmass = visibility['airmass']
                     hours = visibility['observable_hours']
-                    
                     self.details_text.insert(tk.END, f"\nVisible from {observatory}: {is_observable}\n")
                     self.details_text.insert(tk.END, f"Current altitude: {alt:.1f}°\n")
                     self.details_text.insert(tk.END, f"Current airmass: {airmass:.2f}\n")
@@ -1351,7 +1297,7 @@ class DataAcquisitionApp:
                 self.root.after(0, update_details)
         except Exception as e:
             def show_error():
-                self.details_text.delete("end-2l", tk.END)  # Delete "Calculating..." line
+                self.details_text.delete("end-2l", tk.END) # Delete "Calculating..." line
                 self.details_text.insert(tk.END, f"Error checking visibility: {e}\n")
             
             self.root.after(0, show_error)
