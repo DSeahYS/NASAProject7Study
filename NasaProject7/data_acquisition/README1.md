@@ -9,6 +9,12 @@ The system implements a robust hybrid strategy that:
 1. Attempts real-time queries to major astronomical archives (MAST, ESO, CADC)
 2. Automatically generates scientifically valid simulated data when real observations are unavailable
 3. Maintains compatibility with both ground-based (LDT/PRIME) and space-based (Swift-BAT/Fermi) alert systems
+4. Currently only similated results are generated. Fix required
+
+## Websites to query data if simulated results are not to be used.
+1. https://mast.stsci.edu/api/v0/
+2. https://dc.g-vo.org/rr/q/lp/custom/eso.org/tap_obs
+3. https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/en/search/#
 
 **Key Validation**  
 Our simulation framework is validated against recent multi-messenger observations ([GRB 230307A kilonova](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10881391/)) and gravitational wave alert infrastructure standards ([Low-latency GW alerts](https://www.pnas.org/doi/10.1073/pnas.2316474121)).
