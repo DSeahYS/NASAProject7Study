@@ -1,6 +1,7 @@
 # query.py with hybrid real/simulated approach
 
 import os
+import time
 import requests
 from pathlib import Path
 import logging
@@ -17,13 +18,12 @@ logger = logging.getLogger('data_acquisition.query')
 def standardize_fits_headers(fits_file):
     """Standardize FITS headers from different instruments to a common format."""
     logger.info(f"Standardizing headers for {fits_file}")
-    
     try:
         # Check if this is a real FITS file or a placeholder
         if not str(fits_file).endswith('.fits') or os.path.getsize(fits_file) < 2880:
             logger.warning(f"{fits_file} appears to be a placeholder, not a real FITS file")
             return fits_file
-        
+
         # Open the FITS file
         with fits.open(fits_file, mode='update') as hdul:
             primary_hdr = hdul[0].header
@@ -46,7 +46,7 @@ def standardize_fits_headers(fits_file):
             # Update the header with standardized keywords
             for key, value in std_keywords.items():
                 primary_hdr[key] = value
-            
+                
             # Add a keyword to indicate this file has been standardized
             primary_hdr['STDPIPE'] = (True, 'Processed with NIR GRB/GW Pipeline')
             
@@ -63,7 +63,6 @@ def standardize_fits_headers(fits_file):
 def extract_metadata(fits_file):
     """Extract observation metadata from FITS headers."""
     logger.info(f"Extracting metadata from {fits_file}")
-    
     try:
         # Check if this is a placeholder text file
         if not str(fits_file).endswith('.fits') or os.path.getsize(fits_file) < 2880:
@@ -125,10 +124,10 @@ def extract_metadata(fits_file):
             # Create a SkyCoord object for convenient coordinate transformations
             if metadata['ra'] != 0.0 or metadata['dec'] != 0.0:
                 metadata['coords'] = SkyCoord(metadata['ra'], metadata['dec'], unit='deg')
+                
+            logger.info(f"Successfully extracted metadata from {fits_file}")
+            return metadata
             
-        logger.info(f"Successfully extracted metadata from {fits_file}")
-        return metadata
-    
     except Exception as e:
         logger.error(f"Error extracting metadata: {str(e)}")
         return None
@@ -136,6 +135,7 @@ def extract_metadata(fits_file):
 def save_data_to_csv(data, output_dir="csv_outputs", filename="observations.csv"):
     """
     Save data to CSV file in specified directory
+    
     Parameters
     ----------
     data : pandas DataFrame or astropy Table
@@ -144,6 +144,7 @@ def save_data_to_csv(data, output_dir="csv_outputs", filename="observations.csv"
         Directory to save CSV file
     filename : str, optional
         Name of CSV file
+        
     Returns
     -------
     output_path : Path
@@ -165,9 +166,59 @@ def save_data_to_csv(data, output_dir="csv_outputs", filename="observations.csv"
     # Save to CSV
     file_path = output_path / filename
     df.to_csv(file_path, index=False)
-    
     logger.info(f"Saved data to {file_path}")
     return file_path
+
+# New function for service validation
+def validate_service(url):
+    """Check if a VO service is available and responsive."""
+    try:
+        response = requests.get(f"{url}/capabilities", timeout=10)
+        return response.status_code == 200
+    except requests.exceptions.RequestException:
+        return False
+
+# New function for schema verification
+def verify_schema(service_url, table_name):
+    """Verify if a table exists in the service schema."""
+    try:
+        tap = pyvo.dal.TAPService(service_url)
+        tables = [t.name for t in tap.tables]
+        return table_name in tables
+    except Exception as e:
+        logger.warning(f"Schema verification failed: {str(e)}")
+        return False
+
+# New function to build service-specific queries
+def build_query(service_config, position, radius, bands=None):
+    """Build a service-specific ADQL query based on configuration."""
+    # Check if the service config has required keys
+    if not all(k in service_config for k in ['table', 'geo_func', 'columns']):
+        # Fallback to basic query if configuration is incomplete
+        return f"""
+        SELECT *
+        FROM {service_config.get('table', 'ivoa.obscore')}
+        WHERE 1=1
+        """
+    
+    # Build the base query with the geometric function
+    base_query = f"""
+    SELECT {service_config['columns']} 
+    FROM {service_config['table']}
+    WHERE {service_config['geo_func'].format(
+        position.ra.degree, 
+        position.dec.degree, 
+        radius.to(u.deg).value
+    )}
+    """
+    
+    # Add band filtering if specified
+    if bands and 'band_column' in service_config:
+        band_column = service_config['band_column']
+        band_conditions = " OR ".join([f"{band_column} = '{band}'" for band in bands])
+        base_query += f" AND ({band_conditions})"
+        
+    return base_query
 
 def query_vo_archives(position: SkyCoord, radius: u.Quantity, bands=None, time_range=None):
     """
@@ -176,63 +227,81 @@ def query_vo_archives(position: SkyCoord, radius: u.Quantity, bands=None, time_r
     """
     logger.info(f"Querying VO archives at position {position.to_string('hmsdms')} with radius {radius}")
     
-    # Updated TAP service endpoints from search results
+    # Updated service configuration with more detailed parameters
     services = [
-        ("MAST", "https://mast.stsci.edu/vo-tap/api/v0.1/missionmast/"),
-        ("ESO", "http://archive.eso.org/tap_obs/sync"),
-        ("CADC", "https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/tap") 
+        ("MAST", "https://mast.stsci.edu/api/v0.1/tap", {
+            "table": "caom2.Observation",
+            "geo_func": "1=CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {}, {}, {}))",
+            "columns": "ra, dec, instrument_name, filter_name, access_url, obs_id",
+            "band_column": "filter_name"
+        }),
+        ("ESO", "http://archive.eso.org/tap", {
+            "table": "ivoa.obscore",
+            "geo_func": "1=CONTAINS(target_position, CIRCLE('ICRS', {}, {}, {}))",
+            "columns": "s_ra, s_dec, instrument_name, em_min, em_max, access_url, obs_id",
+            "band_column": "em_waveband"
+        }),
+        ("CADC", "https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/tap", {
+            "table": "caom2.Observation",
+            "geo_func": "1=CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {}, {}, {}))",
+            "columns": "ra, dec, instrument_name, filter_name, access_url, obs_id",
+            "band_column": "filter_name",
+            "async": True
+        })
     ]
     
     all_results = []
     success = False
     
     # First attempt: Try to query real archives
-    for name, url in services:
+    for name, url, config in services:
         try:
             logger.info(f"Querying {name} service at {url}")
-            service = pyvo.dal.TAPService(url)
             
-            # Use service-specific queries based on their documentation
-            if name == "MAST":
-                query = f"""
-                SELECT * FROM MissionMast 
-                WHERE CONTAINS(POINT('ICRS', ra, dec),
-                            CIRCLE('ICRS', {position.ra.degree}, {position.dec.degree}, {radius.to(u.deg).value})) = 1
-                """
-                if bands:
-                    band_list = "', '".join(bands)
-                    query += f" AND filter_name IN ('{band_list}')"
+            # Validate service before attempting query
+            if not validate_service(url):
+                logger.warning(f"{name} service at {url} is not available or responsive")
+                continue
+                
+            # Setup session with authentication if needed
+            session = None
+            if 'auth' in config and config['auth'] == 'CADC_API_KEY' and os.getenv('CADC_API_KEY'):
+                session = requests.Session()
+                session.headers.update({'Authorization': 'Bearer ' + os.getenv('CADC_API_KEY')})
+                
+            # Create TAP service with session if available
+            service = pyvo.dal.TAPService(url, session=session)
             
-            elif name == "ESO":
-                query = f"""
-                SELECT * FROM ivoa.ObsCore 
-                WHERE 
-                    1=CONTAINS(POINT('ICRS', s_ra, s_dec),
-                             CIRCLE('ICRS', {position.ra.degree}, {position.dec.degree}, {radius.to(u.deg).value}))
-                    AND dataproduct_type = 'image'
-                """
-                if bands:
-                    band_list = "', '".join(bands)
-                    query += f" AND em_waveband IN ('{band_list}')"
+            # Build query based on service configuration
+            query = build_query(config, position, radius, bands)
             
-            elif name == "CADC":
-                query = f"""
-                SELECT * FROM caom2.Observation
-                WHERE CONTAINS(POINT('ICRS', ra, dec),
-                            CIRCLE('ICRS', {position.ra.degree}, {position.dec.degree}, {radius.to(u.deg).value})) = 1
-                """
-                # Add filter for NIR data if bands specified
-                if bands:
-                    query += " AND ( "
-                    band_conditions = []
-                    for band in bands:
-                        band_conditions.append(f"energy_bandpassName = '{band}'")
-                    query += " OR ".join(band_conditions)
-                    query += " )"
-            
-            # Set a reasonable timeout
-            results = service.search(query, maxrec=100, timeout=30).to_table()
-            
+            # Use async query for CADC and other services that require it
+            if config.get('async', False):
+                try:
+                    job = service.submit_job(query, maxrec=100)
+                    job.run()
+                    
+                    # Wait for job completion with timeout
+                    start_time = time.time()
+                    while job.phase not in ['COMPLETED', 'ERROR', 'ABORTED']:
+                        if time.time() - start_time > 60:  # 60 second timeout
+                            logger.warning(f"Async job timeout for {name}")
+                            job.abort()
+                            break
+                        time.sleep(5)
+                        
+                    if job.phase == 'COMPLETED':
+                        results = job.fetch_result().to_table()
+                    else:
+                        logger.warning(f"Async job failed for {name}: {job.phase}")
+                        continue
+                except Exception as e:
+                    logger.warning(f"Error with async job for {name}: {str(e)}")
+                    continue
+            else:
+                # Use synchronous query for other services
+                results = service.search(query, maxrec=100, timeout=30).to_table()
+                
             if len(results) > 0:
                 logger.info(f"Found {len(results)} results from {name}")
                 results['service_name'] = name  # Add service name column
@@ -240,7 +309,7 @@ def query_vo_archives(position: SkyCoord, radius: u.Quantity, bands=None, time_r
                 success = True  # At least one real query succeeded
             else:
                 logger.info(f"No results found from {name}")
-        
+                
         except Exception as e:
             logger.warning(f"Error querying {name}: {str(e)}")
     
@@ -349,7 +418,6 @@ def download_fits_data(query_results, destination_dir=None):
                     downloaded_files.append(file_path)
                     logger.info(f"Successfully downloaded {filename}")
                     continue
-                
                 except requests.exceptions.RequestException as e:
                     logger.warning(f"Failed to download {result[access_col]}: {str(e)}")
                     # Will fall through to create placeholder
@@ -363,7 +431,7 @@ def download_fits_data(query_results, destination_dir=None):
             
             placeholder_path = create_placeholder_fits(
                 obs_id=obs_id,
-                ra=ra, 
+                ra=ra,
                 dec=dec,
                 filter_name=result.get('filter', 'J'),
                 instrument=result.get('instrument', 'SIMULATED'),
@@ -410,12 +478,10 @@ def create_placeholder_fits(obs_id, ra, dec, filter_name='J', instrument='SIMULA
     
     return file_path
 
-# Ensure all existing functions from original query.py are included here...
-# (standardize_fits_headers, extract_metadata, save_data_to_csv, etc.)
-
 def save_to_excel(data, output_dir="excel_outputs", filename="observations.xlsx"):
     """
     Save data to Excel file in specified directory
+    
     Parameters
     ----------
     data : pandas DataFrame or astropy Table
@@ -424,6 +490,7 @@ def save_to_excel(data, output_dir="excel_outputs", filename="observations.xlsx"
         Directory to save Excel file
     filename : str, optional
         Name of Excel file
+        
     Returns
     -------
     output_path : Path
@@ -445,7 +512,6 @@ def save_to_excel(data, output_dir="excel_outputs", filename="observations.xlsx"
     # Save to Excel
     file_path = output_path / filename
     df.to_excel(file_path, index=False)
-    
     logger.info(f"Saved data to {file_path}")
     return file_path
 
