@@ -2,6 +2,7 @@
 
 import os
 import time
+import json
 import requests
 from pathlib import Path
 import logging
@@ -10,6 +11,8 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
 from astropy import units as u
+import datetime
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -169,56 +172,36 @@ def save_data_to_csv(data, output_dir="csv_outputs", filename="observations.csv"
     logger.info(f"Saved data to {file_path}")
     return file_path
 
-# New function for service validation
-def validate_service(url):
-    """Check if a VO service is available and responsive."""
-    try:
-        response = requests.get(f"{url}/capabilities", timeout=10)
-        return response.status_code == 200
-    except requests.exceptions.RequestException:
+def validate_mast_request(request):
+    """Validate MAST API request structure."""
+    required_keys = ['service', 'params', 'format']
+    if not all(k in request for k in required_keys):
+        logger.warning("Invalid MAST request structure: missing required keys")
         return False
-
-# New function for schema verification
-def verify_schema(service_url, table_name):
-    """Verify if a table exists in the service schema."""
-    try:
-        tap = pyvo.dal.TAPService(service_url)
-        tables = [t.name for t in tap.tables]
-        return table_name in tables
-    except Exception as e:
-        logger.warning(f"Schema verification failed: {str(e)}")
+    
+    required_params = ['coordinates', 'radius']
+    if not all(k in request['params'] for k in required_params):
+        logger.warning("Invalid MAST params: missing coordinates or radius")
         return False
-
-# New function to build service-specific queries
-def build_query(service_config, position, radius, bands=None):
-    """Build a service-specific ADQL query based on configuration."""
-    # Check if the service config has required keys
-    if not all(k in service_config for k in ['table', 'geo_func', 'columns']):
-        # Fallback to basic query if configuration is incomplete
-        return f"""
-        SELECT *
-        FROM {service_config.get('table', 'ivoa.obscore')}
-        WHERE 1=1
-        """
-    
-    # Build the base query with the geometric function
-    base_query = f"""
-    SELECT {service_config['columns']} 
-    FROM {service_config['table']}
-    WHERE {service_config['geo_func'].format(
-        position.ra.degree, 
-        position.dec.degree, 
-        radius.to(u.deg).value
-    )}
-    """
-    
-    # Add band filtering if specified
-    if bands and 'band_column' in service_config:
-        band_column = service_config['band_column']
-        band_conditions = " OR ".join([f"{band_column} = '{band}'" for band in bands])
-        base_query += f" AND ({band_conditions})"
         
-    return base_query
+    valid_services = ['Mast.Caom.Cone', 'Mast.Caom.Filtered']
+    if request['service'] not in valid_services:
+        logger.warning(f"Unsupported MAST service: {request['service']}")
+        return False
+        
+    return True
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def mast_query_with_retry(request):
+    """Execute MAST API query with retry logic."""
+    logger.debug(f"Executing MAST query with retry: {json.dumps(request, indent=2)}")
+    response = requests.post(
+        'https://mast.stsci.edu/api/v0/invoke', 
+        json=request,
+        timeout=30
+    )
+    response.raise_for_status()
+    return response
 
 def query_vo_archives(position: SkyCoord, radius: u.Quantity, bands=None, time_range=None):
     """
@@ -227,91 +210,185 @@ def query_vo_archives(position: SkyCoord, radius: u.Quantity, bands=None, time_r
     """
     logger.info(f"Querying VO archives at position {position.to_string('hmsdms')} with radius {radius}")
     
-    # Updated service configuration with more detailed parameters
-    services = [
-        ("MAST", "https://mast.stsci.edu/api/v0.1/tap", {
-            "table": "caom2.Observation",
-            "geo_func": "1=CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {}, {}, {}))",
-            "columns": "ra, dec, instrument_name, filter_name, access_url, obs_id",
-            "band_column": "filter_name"
-        }),
-        ("ESO", "http://archive.eso.org/tap", {
-            "table": "ivoa.obscore",
-            "geo_func": "1=CONTAINS(target_position, CIRCLE('ICRS', {}, {}, {}))",
-            "columns": "s_ra, s_dec, instrument_name, em_min, em_max, access_url, obs_id",
-            "band_column": "em_waveband"
-        }),
-        ("CADC", "https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/tap", {
-            "table": "caom2.Observation",
-            "geo_func": "1=CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {}, {}, {}))",
-            "columns": "ra, dec, instrument_name, filter_name, access_url, obs_id",
-            "band_column": "filter_name",
-            "async": True
-        })
-    ]
-    
     all_results = []
     success = False
     
-    # First attempt: Try to query real archives
-    for name, url, config in services:
+    # Try MAST API first (using the corrected API approach)
+    try:
+        logger.info(f"Querying MAST service via API")
+        
+        # Convert SkyCoord to decimal degrees
+        ra = position.ra.degree
+        dec = position.dec.degree
+        radius_deg = radius.to(u.deg).value
+        
+        # Build MAST API request with the correct format
+        mast_request = {
+            "request": {
+                "service": "Mast.Caom.Cone",
+                "params": {
+                    "coordinates": f"{ra},{dec}",
+                    "radius": f"{radius_deg} deg",
+                    "pagesize": 2000,
+                    "page": 1,
+                    "removenullcolumns": True,
+                    "removecache": True
+                },
+                "format": "json",
+                "cachebreaker": str(int(datetime.datetime.now().timestamp()))
+            }
+        }
+        
+        # Add NIR filter constraint
+        if bands:
+            if "J" in bands:
+                mast_request["request"]["params"]["filters"] = [
+                    {"paramName": "wavelength_range", "values": [{"min": 1.0, "max": 1.4}]}
+                ]
+            elif "H" in bands:
+                mast_request["request"]["params"]["filters"] = [
+                    {"paramName": "wavelength_range", "values": [{"min": 1.4, "max": 1.8}]}
+                ]
+            elif "K" in bands:
+                mast_request["request"]["params"]["filters"] = [
+                    {"paramName": "wavelength_range", "values": [{"min": 1.8, "max": 2.5}]}
+                ]
+        
+        # Log the request for debugging
+        logger.debug(f"MAST API Request: {json.dumps(mast_request, indent=2)}")
+        
+        # Query MAST API
         try:
-            logger.info(f"Querying {name} service at {url}")
+            response = requests.post(
+                'https://mast.stsci.edu/api/v0/invoke', 
+                json=mast_request,
+                timeout=30
+            )
             
-            # Validate service before attempting query
-            if not validate_service(url):
-                logger.warning(f"{name} service at {url} is not available or responsive")
-                continue
-                
-            # Setup session with authentication if needed
-            session = None
-            if 'auth' in config and config['auth'] == 'CADC_API_KEY' and os.getenv('CADC_API_KEY'):
-                session = requests.Session()
-                session.headers.update({'Authorization': 'Bearer ' + os.getenv('CADC_API_KEY')})
-                
-            # Create TAP service with session if available
-            service = pyvo.dal.TAPService(url, session=session)
-            
-            # Build query based on service configuration
-            query = build_query(config, position, radius, bands)
-            
-            # Use async query for CADC and other services that require it
-            if config.get('async', False):
-                try:
-                    job = service.submit_job(query, maxrec=100)
-                    job.run()
-                    
-                    # Wait for job completion with timeout
-                    start_time = time.time()
-                    while job.phase not in ['COMPLETED', 'ERROR', 'ABORTED']:
-                        if time.time() - start_time > 60:  # 60 second timeout
-                            logger.warning(f"Async job timeout for {name}")
-                            job.abort()
-                            break
-                        time.sleep(5)
-                        
-                    if job.phase == 'COMPLETED':
-                        results = job.fetch_result().to_table()
-                    else:
-                        logger.warning(f"Async job failed for {name}: {job.phase}")
-                        continue
-                except Exception as e:
-                    logger.warning(f"Error with async job for {name}: {str(e)}")
-                    continue
+            if response.status_code == 200:
+                mast_data = response.json()
+                if 'data' in mast_data and len(mast_data['data']) > 0:
+                    # Convert to astropy table
+                    mast_results = Table(rows=mast_data['data'], names=mast_data['fields'])
+                    mast_results['service_name'] = 'MAST'
+                    all_results.append(mast_results)
+                    logger.info(f"Found {len(mast_results)} results from MAST")
+                    success = True
+                else:
+                    logger.info("No results found from MAST")
             else:
-                # Use synchronous query for other services
-                results = service.search(query, maxrec=100, timeout=30).to_table()
-                
-            if len(results) > 0:
-                logger.info(f"Found {len(results)} results from {name}")
-                results['service_name'] = name  # Add service name column
-                all_results.append(results)
-                success = True  # At least one real query succeeded
-            else:
-                logger.info(f"No results found from {name}")
-                
+                logger.warning(f"Error from MAST API: {response.status_code}, {response.text[:500]}")
         except Exception as e:
-            logger.warning(f"Error querying {name}: {str(e)}")
+            logger.warning(f"MAST API request failed: {str(e)}")
+    
+    except Exception as e:
+        logger.warning(f"Error in MAST query processing: {str(e)}")
+    
+    # Try ESO TAP service with improved query
+    try:
+        logger.info(f"Querying ESO service at http://archive.eso.org/tap_obs")
+        service = pyvo.dal.TAPService("http://archive.eso.org/tap_obs")
+        
+        # Build ADQL query for ESO with correct table and column names
+        # Focus specifically on NIR instruments and appropriate wavelength ranges
+        eso_query = f"""
+        SELECT * FROM ivoa.obscore
+        WHERE 
+        1=CONTAINS(POINT('ICRS', s_ra, s_dec),
+                  CIRCLE('ICRS', {position.ra.degree}, {position.dec.degree}, {radius.to(u.deg).value}))
+        AND dataproduct_type = 'image'
+        AND (em_min BETWEEN 1.0 AND 2.5)  -- JHK bands (NIR range)
+        AND instrument_name IN ('HAWK-I', 'ISAAC', 'SOFI', 'VIRCAM', 'KMOS')  -- NIR instruments
+        """
+        
+        # Log the query for debugging
+        logger.debug(f"ESO Query: {eso_query}")
+        
+        # Execute query with a reasonable timeout
+        results = service.search(eso_query, maxrec=100, timeout=30)
+        
+        if results and len(results) > 0:
+            results_table = results.to_table()
+            logger.info(f"Found {len(results_table)} results from ESO")
+            results_table['service_name'] = 'ESO'  # Add service name column
+            all_results.append(results_table)
+            success = True
+        else:
+            logger.info(f"No results found from ESO")
+            
+    except Exception as e:
+        logger.warning(f"Error querying ESO: {str(e)}")
+    
+    # Try CADC service with proper async handling
+    try:
+        logger.info(f"Querying CADC service")
+        
+        # Use the correct CADC TAP service URL
+        cadc_service = pyvo.dal.TAPService("https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/tap")
+        
+        # Build ADQL query for CADC with focus on NIR observations
+        cadc_query = f"""
+        SELECT * FROM caom2.Observation
+        WHERE 1=CONTAINS(POINT('ICRS', position_bounds_center_ra, position_bounds_center_dec),
+                         CIRCLE('ICRS', {position.ra.degree}, {position.dec.degree}, {radius.to(u.deg).value}))
+        """
+        
+        # Add filter for NIR data if bands specified
+        if bands:
+            band_conditions = []
+            for band in bands:
+                band_conditions.append(f"energy_bandpassName = '{band}'")
+            
+            if band_conditions:
+                cadc_query += " AND (" + " OR ".join(band_conditions) + ")"
+        
+        # Log the query for debugging
+        logger.debug(f"CADC Query: {cadc_query}")
+        logger.debug(f"CADC Service URL: {cadc_service.baseurl}")
+        
+        # Use sync query first (simpler, less prone to errors)
+        try:
+            results = cadc_service.search(cadc_query, maxrec=100)
+            if results and len(results) > 0:
+                results_table = results.to_table()
+                logger.info(f"Found {len(results_table)} results from CADC")
+                results_table['service_name'] = 'CADC'
+                all_results.append(results_table)
+                success = True
+            else:
+                logger.info(f"No results found from CADC sync query")
+                
+                # Fall back to async query if the sync query returns no results
+                logger.info("Trying CADC async query")
+                job = cadc_service.submit_job(cadc_query, maxrec=100)
+                job.run()
+                
+                # Wait for the job to complete with a timeout
+                timeout = 60  # seconds
+                start_time = time.time()
+                while job.phase not in ['COMPLETED', 'ERROR', 'ABORTED']:
+                    if time.time() - start_time > timeout:
+                        logger.warning("CADC async query timed out, aborting")
+                        job.abort()
+                        break
+                    time.sleep(2)
+                    
+                if job.phase == 'COMPLETED':
+                    results_table = job.fetch_result().to_table()
+                    if len(results_table) > 0:
+                        logger.info(f"Found {len(results_table)} results from CADC async")
+                        results_table['service_name'] = 'CADC'
+                        all_results.append(results_table)
+                        success = True
+                    else:
+                        logger.info(f"No results found from CADC async query")
+                else:
+                    logger.warning(f"CADC async query failed: {job.phase}")
+        except Exception as e:
+            logger.warning(f"CADC sync query failed, error: {str(e)}")
+            
+    except Exception as e:
+        logger.warning(f"Error setting up CADC query: {str(e)}")
     
     # If real queries failed or returned no results, fall back to simulated data
     if not success:
@@ -385,7 +462,8 @@ def download_fits_data(query_results, destination_dir=None):
         return downloaded_files
     
     # Determine the access URL column name (differs between services)
-    access_url_cols = ['access_url', 'accessURL', 'access', 'download_link', 'datalink', 'access_url']
+    access_url_cols = ['access_url', 'accessURL', 'access', 'download_link', 'datalink', 
+                       's_access_url', 'dataproduct_access_url', 'access_estsize']
     access_col = None
     for col in access_url_cols:
         if col in query_results.colnames:
