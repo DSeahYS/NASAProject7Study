@@ -6,6 +6,26 @@
     <title>Multi-Messenger Astronomy Pipeline: MVP Development Journey</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
     <style>
+        /* Layout Improvements */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
         /* Space Background Animation */
         @keyframes twinkle {
             0%, 100% { opacity: 0.2; }
@@ -163,9 +183,12 @@
     </style>
 </head>
 <body>
-    <h1>Multi-Messenger Astronomy Pipeline: MVP Development Journey</h1>
+    <div class="content-grid">
+        <header class="section">
+            <h1>Multi-Messenger Astronomy Pipeline: MVP Development Journey</h1>
+        </header>
 
-    <div class="card floating">
+        <section class="card floating section">
         <h2>NASA Project #7 Inspired Pipeline</h2>
         <p>This minimum viable product (MVP) implements core functionality for near-infrared transient detection aligned with NASA's Gamma-ray burst and Gravitational Wave counterpart search objectives. The system demonstrates capabilities for:</p>
         <ul>
@@ -370,6 +393,27 @@ def handle_gcn_notice(notice):
 
     // Initialize when page loads
     window.addEventListener('load', fetchGitHubData);
+    </script>
+
+    <!-- Space Background Elements -->
+    <div class="space-bg" id="space-bg"></div>
+    <div class="planet planet-1"></div>
+    <div class="planet planet-2"></div>
+
+    <script>
+    // Create twinkling stars
+    const spaceBg = document.getElementById('space-bg');
+    for (let i = 0; i < 100; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.width = `${Math.random() * 3 + 1}px`;
+        star.style.height = star.style.width;
+        star.style.left = `${Math.random() * 100}%`;
+        star.style.top = `${Math.random() * 100}%`;
+        star.style.animationDelay = `${Math.random() * 5}s`;
+        star.style.opacity = Math.random() * 0.5 + 0.1;
+        spaceBg.appendChild(star);
+    }
     </script>
 </body>
 </html>
