@@ -112,4 +112,4 @@ BSD 3-Clause License - See [LICENSE](LICENSE)
 ---
 
 **Note**: This is an independent study project and not affiliated with NASA.  
-*Created to demonstrate qualifications for Position #7: [NASA Postbaccalaureate Program]([https://nasa.gov/careers](https://cresst2.breezy.hr/p/a3edf6a5f7c2-project-7-postbaccalaureate-positions-in-astrophysics-science-and-solar-system-exploration-divisions-at-nasa-goddard-space-flight-center))*
+*Created to demonstrate qualifications for Position #7: https://cresst2.breezy.hr/p/a3edf6a5f7c2-project-7-postbaccalaureate-positions-in-astrophysics-science-and-solar-system-exploration-divisions-at-nasa-goddard-space-flight-center*
