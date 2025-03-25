@@ -1,9 +1,5 @@
 # NASA Project #7 Study: NIR GRB/GW Counterpart Pipeline
 
-[![GitHub Stars](https://img.shields.io/github/stars/DSeahYS/NASAProject7Study?style=for-the-badge&color=0b3d91)](https://github.com/DSeahYS/NASAProject7Study)
-[![License](https://img.shields.io/badge/License-BSD%203--Clause-nasa-red.svg?style=for-the-badge)](https://opensource.org/licenses/BSD-3-Clause)
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg?style=for-the-badge&logo=python)](https://python.org)
-
 **Demonstration Project for NASA Postbaccalaureate Position #7**  
 *Gamma-ray burst and Gravitational Wave counterpart searches in the near-infrared using ground-based methods*
 
@@ -33,7 +29,6 @@ Aligned with NASA's Strategic Goals:
 
 ## 🔭 Technical Implementation
 
-
 Core Pipeline Structure
 NASAProject7Study/
 ├── data_acquisition/ # VOEvent processing and archive queries
@@ -41,8 +36,6 @@ NASAProject7Study/
 ├── analysis/ # Light curve and spectral analysis
 ├── visualization/ # Multi-messenger data visualization
 └── validation/ # Science verification tests
-
-
 
 **Key Technologies Used**:
 - Astropy for astronomical data handling
