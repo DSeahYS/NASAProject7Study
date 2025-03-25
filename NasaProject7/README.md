@@ -3,7 +3,7 @@
 
 ## Navigation Guide
 Start Here
-data_acquisition/grb_loader.py
+data_acquisition_new/grb_loader.py
 
 Purpose: Core functionality for loading GRB position data
 
