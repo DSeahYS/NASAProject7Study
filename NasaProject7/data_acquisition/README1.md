@@ -1,4 +1,4 @@
-# NIR GRB/GW Pipeline: Data Acquisition Module
+# NIR GRB/GW Pipeline: Data Acquisition Module (Halting for now, unable to collect properly, relies on Simulated Generated Data 95% of the time)
 
 ## Overview
 The Data Acquisition module forms the foundation of the NIR GRB/GW Counterpart Pipeline, responsible for gathering astronomical data from various sources, monitoring real-time alerts, and preparing data for further analysis. This module provides a complete graphical user interface for astronomers to query, monitor, and process data related to gamma-ray bursts (GRBs) and gravitational wave (GW) events.
