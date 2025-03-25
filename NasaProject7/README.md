@@ -45,6 +45,11 @@ visualization/skymap.py - Plot GW probability contours
 
 visualization/multi_wavelength.py - Compare NIR with other bands
 
+## 6. Website
+Website/index.html - Intro Page
+
+Website/documentation.html - Pipeline Flow Page
+
 # Project Goals
 This implementation demonstrates:
 
