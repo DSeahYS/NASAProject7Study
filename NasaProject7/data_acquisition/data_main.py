@@ -26,7 +26,7 @@ from astropy.time import Time
 
 # Import module functions
 from query import query_vo_archives, download_fits_data, standardize_fits_headers, extract_metadata, save_data_to_csv, save_to_excel
-from alerts import parse_gcn_notice, get_ligo_alerts, parse_ligo_skymap, check_visibility
+from alerts import AlertMonitor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -54,6 +54,9 @@ class DataAcquisitionApp:
         self.root = root
         self.root.title("NIR GRB/GW Pipeline: Data Acquisition")
         self.root.geometry("1000x700")
+        
+        # Create alert monitor instance
+        self.alert_monitor = AlertMonitor()
         
         # Set data directories
         self.data_dir = DEFAULT_DATA_DIR
@@ -858,7 +861,7 @@ class DataAcquisitionApp:
         }
         
         # Process the simulated notice
-        parsed_notice = parse_gcn_notice(gcn_notice)
+        parsed_notice = self.alert_monitor.parse_gcn_notice(gcn_notice)
         self.gcn_alerts.append(parsed_notice)
         
         # Update the UI
@@ -885,7 +888,7 @@ class DataAcquisitionApp:
             }
             
             # Process the simulated notice
-            parsed_notice = parse_gcn_notice(gcn_notice)
+            parsed_notice = self.alert_monitor.parse_gcn_notice(gcn_notice)
             self.gcn_alerts.append(parsed_notice)
             
             # Update the UI
@@ -933,7 +936,7 @@ class DataAcquisitionApp:
         try:
             # Get the alerts
             print("Retrieving LIGO/Virgo alerts")
-            alerts = get_ligo_alerts()
+            alerts = self.alert_monitor.get_ligo_alerts()
             
             # Store the alerts
             self.ligo_alerts = alerts
@@ -997,7 +1000,7 @@ class DataAcquisitionApp:
             f.write("Dec: -23.38\n")
         
         # Parse the simulated skymap
-        skymap_data = parse_ligo_skymap(skymap_file)
+        skymap_data = self.alert_monitor.parse_ligo_skymap(skymap_file)
         
         if skymap_data:
             # Get the maximum probability position
@@ -1065,7 +1068,7 @@ class DataAcquisitionApp:
         try:
             # Check visibility
             print(f"Checking visibility of {coordinates.to_string('hmsdms')} from {observatory}")
-            visibility = check_visibility(coordinates, observatory)
+            visibility = self.alert_monitor.check_visibility(coordinates, observatory)
             
             if visibility:
                 # Update the UI from the main thread
@@ -1279,7 +1282,7 @@ class DataAcquisitionApp:
         """Check visibility for an alert and update the details text."""
         try:
             # Check visibility
-            visibility = check_visibility(coordinates, observatory)
+            visibility = self.alert_monitor.check_visibility(coordinates, observatory)
             
             if visibility:
                 # Update the details text
