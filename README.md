@@ -1,7 +1,7 @@
 # Note that we are no longer using the NASAProject7Study Folder as it was too overly complicated and undoable within 5 days.
 # We will be using the NASA7MVP folder instead
 
-# NASA Project #7 Study: NIR GRB/GW Counterpart Pipeline
+# NASA Project #7 Study: NIR GRB/GW Counterpart Pipeline (Old)
 
 **Demonstration Project for NASA Postbaccalaureate Position #7**  
 *Gamma-ray burst and Gravitational Wave counterpart searches in the near-infrared using ground-based methods*
