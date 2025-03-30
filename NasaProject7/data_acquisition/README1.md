@@ -31,27 +31,29 @@ Finding chart creation for transient detection.
 Color-magnitude diagram plotting.
 
 ### 1. Query Tab
-
 Enter object ID or coordinates (e.g., GRB121128A).
 Select instruments and NIR bands.
 Execute queries to retrieve results.
+![image](https://github.com/user-attachments/assets/bffcc0f9-6391-4961-982e-d7318152d61e)
 
 ### 2. Alerts Tab
-
 Start monitoring to track alerts in real-time.
 Generate test alerts for development purposes.
 View alert details including RA, Dec, and confidence levels.
+![image](https://github.com/user-attachments/assets/6f44cc85-39fb-4919-9d69-bd1437e102ee)
 
 ### 3. Analysis Tab
-
 Generate light curves, finding charts, and color-magnitude diagrams.
 Analyze transient behavior in NIR bands.
+![image](https://github.com/user-attachments/assets/7d17ff06-9dbe-49c4-8725-6c5459b04b3b)
+![image](https://github.com/user-attachments/assets/057c9099-16f1-4120-973d-b511176e5717)
+![image](https://github.com/user-attachments/assets/e0479f5c-59b2-40c9-ba58-1b7ea434f665)
 
 ### 4. Settings Tab
-
 Set data directories and log levels.
 Choose alert sources (GCN, SWIFT, Fermi, Simulation).
 Save or reset settings as needed.
+![image](https://github.com/user-attachments/assets/1902c7e1-ad12-4bf9-b7a0-b060730468bc)
 
 ## Data Sources
 Attempted Real Services:
