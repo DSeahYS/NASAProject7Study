@@ -110,3 +110,13 @@ pip install pyvo astropy requests pandas matplotlib tkinter numpy
 - Time-domain simulations use 2025-03-01 as reference epoch
 - Coordinate systems match [7DT standards](https://www.spiedigitallibrary.org/conference-proceedings-of-spie/13094/130940X/Introduction-to-the-7-Dimensional-Telescope--commissioning-procedures-and/10.1117/12.3019546.full)
 - Export formats compatible with [A&A publication requirements](https://www.aanda.org)
+
+
+
+
+
+
+
+From the NASA websites we found ways to query it as well: https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3hdprods.pl:
+![image](https://github.com/user-attachments/assets/7fc2258e-8d63-4691-befa-975b84c78c97)
+
