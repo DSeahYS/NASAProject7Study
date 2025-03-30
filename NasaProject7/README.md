@@ -52,24 +52,30 @@ Enter object ID or coordinates (e.g., GRB121128A)
 Select instruments and NIR bands
 Execute queries to retrieve results
 Download data for further analysis
+![image](https://github.com/user-attachments/assets/bffcc0f9-6391-4961-982e-d7318152d61e)
 
 ## 2. Alerts Tab
 Start monitoring for real-time GRB and GW alerts
 Generate test alerts for development
 View detailed information about received alerts
 Assess follow-up observability
+![image](https://github.com/user-attachments/assets/6f44cc85-39fb-4919-9d69-bd1437e102ee)
 
 ## 3. Analysis Tab
 Generate light curves for GRB afterglows
 Create finding charts for transient identification
 Plot color-magnitude diagrams
 Analyze multi-band observations
+![image](https://github.com/user-attachments/assets/7d17ff06-9dbe-49c4-8725-6c5459b04b3b)
+![image](https://github.com/user-attachments/assets/057c9099-16f1-4120-973d-b511176e5717)
+![image](https://github.com/user-attachments/assets/e0479f5c-59b2-40c9-ba58-1b7ea434f665)
 
 ## 4. Settings Tab
 Configure data directories
 Set log levels
 Choose alert sources
 Save and load configurations
+![image](https://github.com/user-attachments/assets/1902c7e1-ad12-4bf9-b7a0-b060730468bc)
 
 # Technical Implementation
 ## Hybrid Data Acquisition Approach
