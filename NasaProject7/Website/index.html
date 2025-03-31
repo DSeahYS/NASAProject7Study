@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NASA Project 7 - Multi-Messenger Astronomy Pipeline</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="space-bg" id="space-bg"></div>
+    <div class="planet planet-1"></div>
+    <div class="planet planet-2"></div>
+
+    <header class="main-header">
+        <div class="container">
+            <h1>NASA Project 7</h1>
+            <p class="subtitle">Multi-Messenger Astronomy Pipeline</p>
+        </div>
+    </header>
+
+    <nav class="main-nav">
+        <div class="container">
+            <ul>
+                <li><a href="index.html" class="active">Dashboard</a></li>
+                <li><a href="alerts.html">Alerts Monitor</a></li>
+                <li><a href="query.html">Data Query</a></li>
+                <li><a href="visualization.html">Visualization</a></li>
+                <li><a href="documentation.html">Documentation</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="dashboard-grid">
+            <div class="dashboard-card wide">
+                <h2>Recent Alerts</h2>
+                <div class="alert-list" id="alert-list">
+                    <!-- Will be populated by JavaScript -->
+                    <div class="loading">Loading recent alerts...</div>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h2>System Status</h2>
+                <div class="status-indicators">
+                    <div class="status-item online">
+                        <span class="status-dot"></span>
+                        Alert Monitor
+                    </div>
+                    <div class="status-item online">
+                        <span class="status-dot"></span>
+                        Data Acquisition
+                    </div>
+                    <div class="status-item warning">
+                        <span class="status-dot"></span>
+                        Validation Engine
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h2>Quick Query</h2>
+                <form id="quick-query-form">
+                    <div class="form-group">
+                        <label for="object-id">Object ID/Coordinates</label>
+                        <input type="text" id="object-id" placeholder="GRB121128A or 08h02m25.44s +40d51m25.5s">
+                    </div>
+                    <div class="form-group">
+                        <label for="search-radius">Search Radius (deg)</label>
+                        <input type="number" id="search-radius" value="0.2" step="0.1" min="0.1" max="5">
+                    </div>
+                    <button type="submit" class="btn">Query</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

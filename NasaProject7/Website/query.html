@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Query - NASA Project 7</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="space-bg" id="space-bg"></div>
+    <div class="planet planet-1"></div>
+    <div class="planet planet-2"></div>
+
+    <header class="main-header">
+        <div class="container">
+            <h1>Data Query</h1>
+            <p class="subtitle">Search for NIR observations</p>
+        </div>
+    </header>
+
+    <nav class="main-nav">
+        <div class="container">
+            <ul>
+                <li><a href="index.html">Dashboard</a></li>
+                <li><a href="alerts.html">Alerts Monitor</a></li>
+                <li><a href="query.html" class="active">Data Query</a></li>
+                <li><a href="visualization.html">Visualization</a></li>
+                <li><a href="documentation.html">Documentation</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="query-container">
+            <section class="query-params">
+                <h2>Query Parameters</h2>
+                <form id="query-form">
+                    <div class="form-group">
+                        <label for="object-id">Object ID or Coordinates</label>
+                        <input type="text" id="object-id" placeholder="GRB121128A or 08h02m25.44s +40d51m25.5s" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="search-radius">Search Radius (deg)</label>
+                        <input type="number" id="search-radius" value="0.2" step="0.1" min="0.1" max="5" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Instruments</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" name="instrument" value="UKIRT" checked> UKIRT</label>
+                            <label><input type="checkbox" name="instrument" value="VISTA" checked> VISTA</label>
+                            <label><input type="checkbox" name="instrument" value="WFCAM" checked> WFCAM</label>
+                            <label><input type="checkbox" name="instrument" value="VIRCAM" checked> VIRCAM</label>
+                            <label><input type="checkbox" name="instrument" value="HAWK-I" checked> HAWK-I</label>
+                            <label><input type="checkbox" name="instrument" value="SOFI" checked> SOFI</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>NIR Bands</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" name="band" value="J" checked> J</label>
+                            <label><input type="checkbox" name="band" value="H" checked> H</label>
+                            <label><input type="checkbox" name="band" value="K" checked> K</label>
+                            <label><input type="checkbox" name="band" value="Y" checked> Y</label>
+                            <label><input type="checkbox" name="band" value="z" checked> z</label>
+                            <label><input type="checkbox" name="band" value="other" checked> other</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="validate-data"> Validate with GAIA DR3
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn">Execute Query</button>
+                        <button type="button" id="clear-results" class="btn btn-secondary">Clear Results</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="query-results">
+                <div class="results-tabs">
+                    <button class="tab-btn active" data-tab="results">Query Results</button>
+                    <button class="tab-btn" data-tab="validation">Validation</button>
+                </div>
+
+                <div class="tab-content active" id="results-tab">
+                    <div class="results-content" id="results-content">
+                        <p>No query results yet. Enter parameters and click "Execute Query".</p>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="validation-tab">
+                    <div class="validation-content" id="validation-content">
+                        <p>No validation results available. Enable validation and run a query.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="query.js"></script>
+</body>
+</html>
