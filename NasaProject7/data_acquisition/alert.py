@@ -44,7 +44,7 @@ logger = logging.getLogger('data_acquisition.alerts')
 class MultiMessengerAlertHandler:
     """O4-era alert processor with low-latency GW/GRB correlation"""
     
-    def __init__(self, config_path: str = 'config/alerts.json'):
+    def __init__(self, config_path: str = 'config/alerts.json', alert_callback=None):
         """Initialize the alert handler"""
         self.config = self._load_config(config_path)
         self.locations = self._init_observatories()
@@ -55,6 +55,7 @@ class MultiMessengerAlertHandler:
         self.monitoring_active = False
         self.alert_thread = None
         self.alert_lock = threading.Lock()  # Thread-safe access to alerts
+        self.alert_callback = alert_callback  # Callback to notify UI
         
         # Alert statistics
         self.metrics = {
@@ -242,6 +243,13 @@ class MultiMessengerAlertHandler:
             
             logger.info(f"Received {alert_type} alert: {alert['id']}")
             
+            # Notify UI if callback is registered
+            if self.alert_callback:
+                try:
+                    self.alert_callback(alert)
+                except Exception as e:
+                    logger.error(f"Error in alert callback: {str(e)}")
+            
             # Check for coincidences
             self._check_coincidences()
     
@@ -352,22 +360,25 @@ class MultiMessengerAlertHandler:
     def _create_mock_skymap(self) -> QTable:
         """Generate a mock HEALPix skymap for testing"""
         nside = 64
-        npix = ah.nside2npix(nside)
+        
+        # Initialize HEALPix with ICRS frame
+        from astropy.coordinates import ICRS
+        hp = ah.HEALPix(nside=nside, order='nested', frame=ICRS())
+        npix = hp.npix
         
         # Create a dummy skymap centered at a random point
         ra = np.random.uniform(0, 360)
         dec = np.random.uniform(-90, 90)
         
-        # Calculate pixel indices
-        hp = HEALPix(nside=nside, order='nested')
-        center_idx = hp.skycoord_to_healpix(SkyCoord(ra*u.deg, dec*u.deg))
+        # Calculate pixel indices using proper coordinate frame
+        center_coords = SkyCoord(ra*u.deg, dec*u.deg)
+        center_idx = hp.skycoord_to_healpix(center_coords)
         
         # Create probability distribution (simple Gaussian-like)
         prob = np.zeros(npix)
-        for i in range(npix):
-            coords = hp.healpix_to_skycoord(i)
-            sep = coords.separation(SkyCoord(ra*u.deg, dec*u.deg)).deg
-            prob[i] = np.exp(-0.5 * (sep/5)**2)
+        all_coords = hp.healpix_to_skycoord(np.arange(npix))
+        separations = center_coords.separation(all_coords).deg
+        prob = np.exp(-0.5 * (separations/5)**2)
         
         # Normalize
         prob /= np.sum(prob)
@@ -822,8 +833,10 @@ class MultiMessengerAlertHandler:
         try:
             # Determine HEALPix resolution
             npix = len(skymap)
-            nside = ah.npix2nside(npix)
-            hp = HEALPix(nside=nside, order='nested')
+            
+            # Initialize HEALPix with ICRS frame
+            from astropy.coordinates import ICRS
+            hp = ah.HEALPix(nside=ah.npix_to_nside(npix), order='nested', frame=ICRS())
             
             # Find the closest HEALPix pixel to the GRB position
             ipix = hp.skycoord_to_healpix(coords)
@@ -832,11 +845,11 @@ class MultiMessengerAlertHandler:
             prob = skymap['PROB'][ipix]
             
             # For a more accurate estimate, we should consider the GRB error circle
-            # Convert error radius to radians
-            error_rad = np.radians(error_radius)
+            # Convert error radius to radians with units
+            error_rad = error_radius * u.deg.to(u.rad)
             
-            # Get all pixels within the error circle
-            disc_ipix = hp.cone_search(coords, radius=error_rad)
+            # Get all pixels within the error circle using coordinate-aware method
+            disc_ipix = hp.cone_search_skycoord(coords, radius=error_rad*u.rad)
             
             # Sum probability within error circle
             total_prob = np.sum(skymap['PROB'][disc_ipix])
