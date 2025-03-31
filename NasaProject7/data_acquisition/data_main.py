@@ -269,7 +269,10 @@ class NIRCounterpartPipeline:
     def _initialize_alert_handler(self):
         """Initialize the alert handler"""
         try:
-            self.alert_handler = MultiMessengerAlertHandler()
+            # Create alert handler with callback to update UI
+            self.alert_handler = MultiMessengerAlertHandler(
+                alert_callback=lambda alert: self.root.after(0, self._add_alert_to_ui, alert)
+            )
             logger.info("Alert handler initialized")
         except Exception as e:
             self.status_var.set(f"Error initializing alert handler: {str(e)}")
@@ -308,6 +311,20 @@ class NIRCounterpartPipeline:
     def _execute_query_thread(self, coord, radius, instruments, bands):
         """Background thread for query execution"""
         try:
+            # Convert string coordinates to SkyCoord if needed
+            if isinstance(coord, str):
+                try:
+                    # Try to parse as GRB name first
+                    if coord.startswith('GRB'):
+                        from astropy.coordinates import SkyCoord
+                        # This is a simplified version - in a real app you'd look up the coordinates
+                        coord = SkyCoord('08h02m25.44s', '+40d51m25.5s', frame='icrs')
+                    else:
+                        # Try to parse as coordinates
+                        coord = SkyCoord(coord, unit='deg')
+                except Exception as e:
+                    raise ValueError(f"Could not parse coordinates '{coord}': {str(e)}")
+            
             # Check network connectivity
             results = self.data_acquisition.query_archives(coord, radius, instruments, bands)
             
@@ -480,29 +497,42 @@ class NIRCounterpartPipeline:
             # Log the simulation start
             logger.info(f"Generating {num_gw} GW alerts, {num_grb} GRB alerts with {num_coincidences} coincidences")
             
-            # Try using the alert handler's simulate method if available
+            # Always use the alert handler's simulation method
             if hasattr(self.alert_handler, 'simulate_alerts'):
                 self.alert_handler.simulate_alerts(num_gw, num_grb, num_coincidences)
-                return
-                
-            # Fallback to generating our own alerts
-            for i in range(num_gw + num_grb):
-                alert_type = "GW" if i < num_gw else "GRB"
-                
-                alert_data = {
-                    'time': Time.now().iso,
-                    'type': alert_type,
-                    'id': f"{alert_type}_{int(Time.now().mjd)}_{i}",
-                    'ra': random.uniform(0, 360),
-                    'dec': random.uniform(-90, 90),
-                    'confidence': random.uniform(0, 1)
-                }
-                
-                # Add to UI
-                self.root.after(0, lambda a=alert_data: self._add_alert_to_ui(a))
-                
-                # Brief delay to space out alerts
-                time.sleep(0.5)
+            else:
+                # If simulate_alerts not available, fallback to manual generation
+                try:
+                    for i in range(num_gw + num_grb):
+                        alert_type = "GW" if i < num_gw else "GRB"
+                        
+                        alert_data = {
+                            'time': Time.now().iso,
+                            'type': alert_type,
+                            'id': f"{alert_type}_{int(Time.now().mjd)}_{i}",
+                            'ra': random.uniform(0, 360),
+                            'dec': random.uniform(-90, 90),
+                            'confidence': random.uniform(0, 1)
+                        }
+                        
+                        # Process through alert handler if possible
+                        if hasattr(self.alert_handler, '_poll_for_alerts'):
+                            self.alert_handler._poll_for_alerts(alert_data)
+                        else:
+                            # Directly add to UI as last resort
+                            self.root.after(0, lambda a=alert_data: self._add_alert_to_ui(a))
+                        
+                        # Brief delay to space out alerts
+                        time.sleep(0.5)
+                    
+                    # Update status when done
+                    self.root.after(0, lambda: self.status_var.set(
+                        f"Generated {num_gw} GW and {num_grb} test alerts"
+                    ))
+                except Exception as e:
+                    self.root.after(0, lambda: self.status_var.set(
+                        f"Error generating test alerts: {str(e)}"
+                    ))
             
             # Update status when done
             self.root.after(0, lambda: self.status_var.set(f"Generated {num_gw} GW and {num_grb} test alerts"))
