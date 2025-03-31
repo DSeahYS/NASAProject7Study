@@ -1,4 +1,4 @@
-# NIR GRB/GW Counterpart Pipeline
+# NIR GRB/GW Counterpart Pipeline (incomplete)
 A comprehensive Near-Infrared (NIR) pipeline for detecting and analyzing counterparts to Gamma-Ray Bursts (GRBs) and Gravitational Wave (GW) events
 This multi-messenger astronomy tool combines data from various observatories and wavelength regimes to facilitate the study of high-energy transient phenomena.
 
