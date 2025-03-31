@@ -19,6 +19,7 @@ import numpy as np
 # Import project modules
 from data_acquisition.alerts import MultiMessengerAlertHandler
 from data_acquisition.query import HybridDataAcquisition as DataAcquisition
+from data_acquisition.validation import GaiaValidationEngine
 
 # Configure logging
 logging.basicConfig(
@@ -101,6 +102,12 @@ class NIRCounterpartPipeline:
                 row=i//2, column=i%2, sticky=tk.W, padx=5, pady=2
             )
         
+        # Add validation checkbox
+        self.validate_data = tk.BooleanVar(value=False)
+        ttk.Checkbutton(left_frame, text="Validate with GAIA DR3", variable=self.validate_data).grid(
+            row=5, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5
+        )
+        
         # Bands frame
         bands_frame = ttk.LabelFrame(left_frame, text="NIR Bands")
         bands_frame.grid(row=3, column=0, columnspan=2, sticky=tk.W+tk.E, padx=5, pady=5)
@@ -125,9 +132,25 @@ class NIRCounterpartPipeline:
         right_frame = ttk.LabelFrame(query_frame, text="Query Results")
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
+        # Create notebook for results and validation
+        self.results_notebook = ttk.Notebook(right_frame)
+        self.results_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Results tab
+        results_tab = ttk.Frame(self.results_notebook)
+        self.results_notebook.add(results_tab, text="Query Results")
+        
         # Results text area
-        self.results_text = scrolledtext.ScrolledText(right_frame, wrap=tk.WORD, width=60, height=30)
+        self.results_text = scrolledtext.ScrolledText(results_tab, wrap=tk.WORD, width=60, height=30)
         self.results_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Validation tab
+        validation_tab = ttk.Frame(self.results_notebook)
+        self.results_notebook.add(validation_tab, text="Validation")
+        
+        # Validation text area
+        self.validation_text = scrolledtext.ScrolledText(validation_tab, wrap=tk.WORD, width=60, height=30)
+        self.validation_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Download button
         ttk.Button(right_frame, text="Download Selected", command=self._download_selected).pack(pady=5)
@@ -331,9 +354,38 @@ class NIRCounterpartPipeline:
             # Store results for later use
             self.current_results = results
             
+            # Run validation if enabled
+            validation_report = None
+            if self.validate_data.get() and results:
+                try:
+                    validator = GaiaValidationEngine()
+                    # Get local file path instead of URL if needed
+                    file_path = results[0].get('local_path', results[0]['url'])
+                    if file_path.startswith('http'):
+                        # Download file first if it's a URL
+                        import urllib.request
+                        local_path = os.path.join(self.data_dir_var.get(), os.path.basename(file_path))
+                        urllib.request.urlretrieve(file_path, local_path)
+                        file_path = local_path
+                    validation_report = validator.validate_fits_file(file_path)
+                except Exception as e:
+                    error_msg = str(e)
+                    self.root.after(0, lambda msg=error_msg: messagebox.showerror(
+                        "Validation Error",
+                        f"Could not validate file: {msg}"
+                    ))
+                    validation_report = {
+                        'error': error_msg,
+                        'astrometry': {'status': 'Failed'},
+                        'photometry': {'status': 'Failed'},
+                        'matching': {'status': 'Failed'}
+                    }
+            
             # Update UI in main thread
             def _update_ui():
                 self._display_results(results)
+                if validation_report:
+                    self._display_validation(validation_report)
                 self.status_var.set(f"Found {len(results)} observations")
             
             self.root.after(0, _update_ui)
@@ -361,6 +413,25 @@ class NIRCounterpartPipeline:
             self.results_text.insert(tk.END, f"  Exposure: {item.get('exposure', 'Unknown')} seconds\n")
             self.results_text.insert(tk.END, f"  URL: {item.get('url', 'N/A')}\n")
             self.results_text.insert(tk.END, "-" * 50 + "\n")
+    
+    def _display_validation(self, report):
+        """Display validation results"""
+        self.validation_text.delete(1.0, tk.END)
+        self.validation_text.insert(tk.END, "GAIA DR3 Validation Report:\n")
+        
+        if 'error' in report:
+            self.validation_text.insert(tk.END, f"Validation Error: {report['error']}\n")
+        else:
+            try:
+                self.validation_text.insert(tk.END, f"Astrometric RMS: {report['astrometry'].get('total_rms', 'N/A')} arcsec\n")
+                self.validation_text.insert(tk.END, f"Photometric zero point: {report['photometry'].get('zp_offset', 'N/A')} mag\n")
+                self.validation_text.insert(tk.END, f"Number of matched sources: {report['matching'].get('n_matches', 0)}\n")
+                self.validation_text.insert(tk.END, f"Positional offset: {report['astrometry'].get('offset', 'N/A')} arcsec\n")
+                self.validation_text.insert(tk.END, f"Magnitude offset: {report['photometry'].get('mag_offset', 'N/A')} mag\n")
+            except Exception as e:
+                self.validation_text.insert(tk.END, f"Error displaying validation results: {str(e)}\n")
+        
+        self.results_notebook.select(1)  # Switch to validation tab
     
     def _clear_results(self):
         """Clear the results display"""
