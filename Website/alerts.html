@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerts Monitor - NASA Project 7</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="space-bg" id="space-bg"></div>
+    <div class="planet planet-1"></div>
+    <div class="planet planet-2"></div>
+
+    <header class="main-header">
+        <div class="container">
+            <h1>Alerts Monitor</h1>
+            <p class="subtitle">Real-time GRB and GW alerts</p>
+        </div>
+    </header>
+
+    <nav class="main-nav">
+        <div class="container">
+            <ul>
+                <li><a href="index.html">Dashboard</a></li>
+                <li><a href="alerts.html" class="active">Alerts Monitor</a></li>
+                <li><a href="query.html">Data Query</a></li>
+                <li><a href="visualization.html">Visualization</a></li>
+                <li><a href="documentation.html">Documentation</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="alert-controls">
+            <div class="control-buttons">
+                <button id="start-monitoring" class="btn">Start Monitoring</button>
+                <button id="pause-monitoring" class="btn btn-secondary">Pause</button>
+                <button id="simulate-alerts" class="btn btn-warning">Simulate Alerts</button>
+            </div>
+            
+            <div class="alert-filters">
+                <label>
+                    <input type="checkbox" name="alert-type" value="GRB" checked> GRB
+                </label>
+                <label>
+                    <input type="checkbox" name="alert-type" value="GW" checked> GW
+                </label>
+                <label>
+                    <input type="checkbox" name="alert-type" value="Test" checked> Test
+                </label>
+            </div>
+        </section>
+
+        <section class="alert-list-container">
+            <div class="alert-table-header">
+                <div>Time</div>
+                <div>Type</div>
+                <div>Alert ID</div>
+                <div>RA</div>
+                <div>Dec</div>
+                <div>Significance</div>
+            </div>
+            <div class="alert-table-body" id="alert-table-body">
+                <div class="loading">Loading alerts...</div>
+            </div>
+        </section>
+
+        <section class="alert-details" id="alert-details">
+            <h2>Alert Details</h2>
+            <div class="details-content">
+                <p>Select an alert to view details</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="alerts.js"></script>
+</body>
+</html>

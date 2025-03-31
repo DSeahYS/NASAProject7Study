@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualization - NASA Project 7</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min"></script>
+</head>
+<body>
+    <div class="space-bg" id="space-bg"></div>
+    <div class="planet planet-1"></div>
+    <div class="planet planet-2"></div>
+
+    <header class="main-header">
+        <div class="container">
+            <h1>Data Visualization</h1>
+            <p class="subtitle">Interactive data exploration</p>
+        </div>
+    </header>
+
+    <nav class="main-nav">
+        <div class="container">
+            <ul>
+                <li><a href="index.html">Dashboard</a></li>
+                <li><a href="alerts.html">Alerts Monitor</a></li>
+                <li><a href="query.html">Data Query</a></li>
+                <li><a href="visualization.html" class="active">Visualization</a></li>
+                <li><a href="documentation.html">Documentation</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="visualization-controls">
+            <div class="control-group">
+                <label for="plot-type">Plot Type</label>
+                <select id="plot-type" class="plot-select">
+                    <option value="light-curve">Light Curve</option>
+                    <option value="finding-chart">Finding Chart</option>
+                    <option value="color-magnitude">Color-Magnitude Diagram</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="data-source">Data Source</label>
+                <select id="data-source" class="plot-select">
+                    <option value="recent">Recent Query Results</option>
+                    <option value="saved">Saved Data</option>
+                    <option value="example">Example Data</option>
+                </select>
+            </div>
+
+            <button id="generate-plot" class="btn">Generate Plot</button>
+        </section>
+
+        <section class="plot-container">
+            <div id="plot-area">
+                <div class="plot-placeholder">
+                    <p>Select plot type and click "Generate Plot"</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="plot-options">
+            <h3>Plot Options</h3>
+            <div class="options-grid">
+                <div class="option-group">
+                    <label>
+                        <input type="checkbox" id="show-error-bars" checked>
+                        Show Error Bars
+                    </label>
+                </div>
+                <div class="option-group">
+                    <label>
+                        <input type="checkbox" id="show-model" checked>
+                        Show Model Fit
+                    </label>
+                </div>
+                <div class="option-group">
+                    <label for="color-scheme">Color Scheme</label>
+                    <select id="color-scheme" class="plot-select">
+                        <option value="default">Default</option>
+                        <option value="heat">Heat Map</option>
+                        <option value="spectral">Spectral</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="visualization.js"></script>
+</body>
+</html>
