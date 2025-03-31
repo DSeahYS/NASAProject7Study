@@ -59,7 +59,7 @@ Start monitoring for real-time GRB and GW alerts
 Generate test alerts for development
 View detailed information about received alerts
 Assess follow-up observability
-![image](https://github.com/user-attachments/assets/6f44cc85-39fb-4919-9d69-bd1437e102ee)
+![image](https://github.com/user-attachments/assets/6f5280b8-4b7e-4d11-b197-202c968a0cb3)
 
 ## 3. Analysis Tab
 Generate light curves for GRB afterglows
