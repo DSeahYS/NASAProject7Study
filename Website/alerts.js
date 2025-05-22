@@ -32,55 +32,11 @@ class AlertMonitor {
     }
     
     async loadInitialAlerts() {
-        try {
-            // In a real app, this would fetch from your API
-            // const response = await fetch('/api/alerts');
-            // this.alerts = await response.json();
-            
-            // Mock data for now
-            this.alerts = [
-                {
-                    id: 'GRB240331A',
-                    type: 'GRB',
-                    time: new Date().toISOString(),
-                    ra: '08h02m25.44s',
-                    dec: '+40d51m25.5s',
-                    significance: 'High',
-                    details: 'Gamma-ray burst detected by Fermi GBM'
-                },
-                {
-                    id: 'GW240330B',
-                    type: 'GW',
-                    time: new Date(Date.now() - 3600000).toISOString(),
-                    ra: '12h30m45.67s',
-                    dec: '-05d12m34.5s',
-                    significance: 'Medium',
-                    details: 'Gravitational wave candidate from LIGO/Virgo'
-                }
-            ];
             
             this.renderAlerts();
         } catch (error) {
             this.showError('Failed to load alerts', error);
         }
-    }
-    
-    startMonitoring() {
-        if (this.monitoring) return;
-        
-        this.monitoring = true;
-        this.startBtn.disabled = true;
-        this.pauseBtn.disabled = false;
-        
-        // In a real app, this would connect to WebSocket
-        console.log('Starting alert monitoring...');
-        
-        // Simulate receiving alerts
-        this.alertInterval = setInterval(() => {
-            if (Math.random() > 0.7) {
-                this.receiveAlert(this.generateRandomAlert());
-            }
-        }, 5000);
     }
     
     pauseMonitoring() {
