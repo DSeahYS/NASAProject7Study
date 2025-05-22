@@ -103,41 +103,7 @@ async function handleQuickQuery(event) {
         return;
     }
     
-    try {
-        // In a real implementation, this would submit to your API
-        // const response = await fetch('/api/query', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify({ objectId, radius })
-        // });
-        // const results = await response.json();
-        
-        // For now, just show a message
-        alert(`Query submitted for ${objectId} with radius ${radius}°`);
-        
-        // In a real app, you would redirect to query results page
-        // window.location.href = `query.html?object=${encodeURIComponent(objectId)}&radius=${radius}`;
-        
-    } catch (error) {
-        alert(`Query failed: ${error.message}`);
-        console.error('Query error:', error);
-    }
-}
-
-// Update system status (mock for now)
-function updateSystemStatus() {
-    // In a real implementation, this would poll your API
-    // for system status updates
-    setInterval(() => {
-        // Randomly toggle status for demo
-        const statusItems = document.querySelectorAll('.status-item');
-        statusItems.forEach(item => {
-            if (Math.random() > 0.8) {
-                item.classList.toggle('warning');
-                item.classList.toggle('online');
-            }
-        });
-    }, 5000);
+   }
 }
 
 // Initialize status updates
